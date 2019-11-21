@@ -1,23 +1,16 @@
-use crate::handler::{Handler, AppHandler};
-use abci::{RequestCheckTx, ResponseCheckTx, RequestBeginBlock, RequestDeliverTx, ResponseDeliverTx, ResponseBeginBlock, RequestEndBlock, ResponseEndBlock, ResponseCommit, RequestCommit, Header};
+use crate::handler::AppHandler;
+use abci::{RequestCheckTx, ResponseCheckTx, RequestBeginBlock, RequestDeliverTx, ResponseDeliverTx, ResponseBeginBlock, RequestEndBlock, ResponseEndBlock, ResponseCommit, RequestCommit, RequestInfo, ResponseInfo, RequestInitChain, ResponseInitChain, RequestQuery, ResponseQuery};
 use crate::tx::Tx;
 use std::error::Error;
-use crate::context::StdContext;
+use crate::context::{StdContext, ABCIPhase};
+use crate::context::ABCIPhase::{BeginBlock, Check, InitChain, Query};
+use crate::config::Config;
 
 struct ABCIBaseApp {
 //    logger log.Logger
 
-    // name is what is returned from abci.Info
-    name: String,
-
     // Database state (committed, check, deliver....)
 //    store: *CommitStore
-
-    // Code to initialize from a genesis file
-//    initializer weave.Initializer
-
-    // How to handle queries
-//    queryRouter weave.QueryRouter
 
     // chainID is loaded from db in initialization
     // saved once in parseGenesis
@@ -33,12 +26,49 @@ struct ABCIBaseApp {
     //    decoder: TxDecoder,
     handler: Box<dyn AppHandler>,
     //    ticker: Ticker,
-    debug: bool,
+}
+
+impl ABCIBaseApp {
+    pub fn new(chain_id: String, handler: Box<dyn AppHandler>, config: Config) -> Self {
+        let ctx = StdContext{
+            config,
+            header: Default::default(),
+            conditions: Default::default(),
+            phase: ABCIPhase::Query,
+        };
+        ABCIBaseApp {
+            chain_id,
+            base_context: ctx.clone(),
+            block_context: ctx,
+            handler,
+        }
+    }
 }
 
 impl abci::Application for ABCIBaseApp {
+    fn info(&mut self, _req: &RequestInfo) -> ResponseInfo {
+        ResponseInfo {
+            data: self.name.to_string(),
+            version: "".to_string(),
+            app_version: 0,
+            last_block_height: 0,
+            last_block_app_hash: vec![],
+            unknown_fields: Default::default(),
+            cached_size: Default::default(),
+        }
+    }
+
+    fn init_chain(&mut self, req: &RequestInitChain) -> ResponseInitChain {
+        let ctx = StdContext {
+            phase: InitChain,
+            ..self.base_context
+        };
+        self.handler.init_chain(ctx, req)
+    }
+
     fn begin_block(&mut self, req: &RequestBeginBlock) -> ResponseBeginBlock {
         let ctx = StdContext {
+            phase: BeginBlock,
             config: self.base_context.config.clone(),
             header: req.get_header().clone(),
             conditions: Default::default(),
@@ -49,6 +79,10 @@ impl abci::Application for ABCIBaseApp {
 
     fn check_tx(&mut self, req: &RequestCheckTx) -> ResponseCheckTx {
         let mut res = ResponseCheckTx::new();
+        let ctx = StdContext {
+            phase: Check,
+            ..self.block_context
+        };
         match self.load_tx(req.get_tx()) {
             Err(e) => {
                 res.code = 1;
@@ -85,6 +119,14 @@ impl abci::Application for ABCIBaseApp {
 
     fn commit(&mut self, _req: &RequestCommit) -> ResponseCommit {
         ResponseCommit::new()
+    }
+
+    fn query(&mut self, req: &RequestQuery) -> ResponseQuery {
+        let ctx = StdContext {
+            phase: Query,
+            ..self.base_context
+        };
+        self.handler.query(ctx, req)
     }
 }
 

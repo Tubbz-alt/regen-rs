@@ -12,9 +12,19 @@ pub struct StdContext {
     pub config: Config,
     pub header: Header,
     pub conditions: HashSet<Condition>,
+    pub phase: ABCIPhase
 }
 
 pub struct StoreKey(Box<[u8]>);
+
+pub enum ABCIPhase {
+    Query,
+    InitChain,
+    BeginBlock,
+    Check,
+    Deliver,
+    EndBlock,
+}
 
 pub trait Context {
     fn readonly_kv_store(&self, key: StoreKey) -> Result<Box<dyn ReadonlyKVStore>, Box<dyn Error>>;
@@ -25,6 +35,7 @@ pub trait Context {
     fn condition_address(&self, condition: &Condition) -> Address;
     fn get_conditions(&self) -> &HashSet<Condition>;
     fn with_conditions(&self, conditions: &[Condition]) -> Box<dyn Context>;
+    fn abci_phase(&self) -> &ABCIPhase;
 }
 
 impl Context for StdContext {
@@ -86,6 +97,10 @@ impl Context for StdContext {
 //            _conditions: new_conds.clone(),
 //        })
         unimplemented!()
+    }
+
+    fn abci_phase(&self) -> &ABCIPhase {
+        &self.phase
     }
 }
 

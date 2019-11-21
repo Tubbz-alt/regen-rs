@@ -1,30 +1,41 @@
 use crate::handler::{Handler, Checker, Deliverer};
 use crate::context::Context;
 use crate::tx::Tx;
-use crate::result::{CheckResult, DeliverResult};
+use crate::result::{CheckResult, DeliverResult, Res};
 use std::error::Error;
 use std::collections::HashMap;
-use grpc::rt::ServerMethod;
+use grpc::rt::{ServerMethod, MethodHandler};
+use std::ops::Deref;
 
 struct GrpcHandler {
-    method_resolver: dyn MethodResolver,
-    methods: HashMap<String, ServerMethod>
+    method_resolver: Box<dyn MethodResolver>,
+    methods: HashMap<String, dyn MethodHandler>
 }
 
 pub struct MethodCall {
-    name: string,
+    name: String,
     body: Box<[u8]>
 }
 
 pub trait MethodResolver {
-    fn resolve(&self, msg: &[u8]) -> MethodCall;
+    fn resolve(&self, msg: &[u8]) -> Res<MethodCall>;
 }
 
 impl Handler for GrpcHandler {}
 
 impl Checker for GrpcHandler {
     fn check(&self, ctx: &dyn Context, tx: &dyn Tx) -> Result<CheckResult, Box<dyn Error>> {
-        unimplemented!()
+        match self.method_resolver.resolve(tx.get_msg()) {
+            Err(e) => Err(e),
+            Ok(mc) => {
+                match self.methods.get(&mc.name) {
+                    None => panic!(),
+                    Some(method) => {
+                        method.handle()
+                    }
+                }
+            }
+        }
     }
 }
 

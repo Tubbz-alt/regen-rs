@@ -1,13 +1,8 @@
 use std::error::Error;
 use crate::auth::PubKey;
 
-pub trait Msg {
-    fn get_route(&self) -> u64;
-    fn get_bytes(&self) -> &[u8];
-}
-
 pub trait Tx {
-    fn get_msg(&self) -> Result<Box<dyn Msg>, Box<dyn Error>>;
+    fn get_msg(&self) -> &[u8];
     fn get_sign_bytes(&self) -> &[u8];
     fn get_signatures(&self) -> &[Box<dyn StdSignature>];
 }
