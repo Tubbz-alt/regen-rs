@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+message Account {
+    bytes address = 1;
+    PubKey pubkey = 2;
+    uint64 sequence = 3;
+    bytes metadata = 4;
+}
+
+message PubKey {
+    oneof sum {
+        bytes ed25519 = 1;
+    }
+}
