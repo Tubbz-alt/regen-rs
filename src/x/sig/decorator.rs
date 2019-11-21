@@ -1,4 +1,3 @@
-use crate::handler::{Decorator, Checker, Deliverer};
 use crate::context::Context;
 use crate::result::{CheckResult, DeliverResult};
 use std::error::Error;
@@ -8,6 +7,7 @@ use crate::auth::{Address, Condition, PubKey};
 use crate::x::sig::codec::Account;
 use crate::x::sig::codec;
 use crate::auth::ed25519;
+use crate::handler::{Decorator, Handler, TxHandler};
 
 pub struct Keeper {
     auth_table: Box<dyn Table<Address, Account>>
@@ -18,19 +18,19 @@ pub fn new_keeper() -> Box<Keeper> {
 }
 
 impl Decorator for Keeper {
-    fn decorate_check(&self, ctx: &dyn Context, tx: &dyn Tx, next: &dyn Checker) -> Result<CheckResult, Box<dyn Error>> {
-        let chain_id: String = ctx.block_header().chain_id.clone();
-        let conds = self.verify_tx_signatures(ctx, tx)?;
-        let new_ctx = ctx.with_conditions(conds.as_ref());
-        next.check(new_ctx.as_ref(), tx)
-    }
-
-    fn decorate_deliver(&self, ctx: &dyn Context, tx: &dyn Tx, next: &dyn Deliverer) -> Result<DeliverResult, Box<dyn Error>> {
-        let chain_id: String = ctx.block_header().chain_id.clone();
-        let conds = self.verify_tx_signatures(ctx, tx)?;
-        let new_ctx = ctx.with_conditions(conds.as_ref());
-        next.deliver(new_ctx.as_ref(), tx)
-    }
+//    fn on_check(&self, ctx: &dyn Context, tx: &Box<dyn Tx>, next: &TxHandler) -> CheckResult {
+//        let chain_id: String = ctx.block_header().chain_id.clone();
+//        let conds = self.verify_tx_signatures(ctx, tx)?;
+//        let new_ctx = ctx.with_conditions(conds.as_ref());
+//        next.check(new_ctx.as_ref(), tx)
+//    }
+//
+//    fn on_deliver(&self, ctx: &dyn Context, tx: &Box<dyn Tx>, next: &TxHandler) -> DeliverResult {
+//        let hain_id: String = ctx.block_header().chain_id.clone();
+//        let conds = self.verify_tx_signatures(ctx, tx)?;
+//        let new_ctx = ctx.with_conditions(conds.as_ref());
+//        next.deliver(new_ctx.as_ref(), tx)
+//    }
 }
 
 impl Keeper {

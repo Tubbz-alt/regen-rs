@@ -2,55 +2,85 @@ use crate::context::Context;
 use crate::result::{CheckResult, DeliverResult};
 use crate::tx::Tx;
 use crate::result::Res;
-use abci::{RequestBeginBlock, ResponseBeginBlock, RequestEndBlock, ResponseEndBlock, ResponseInitChain, RequestInitChain, RequestQuery, ResponseQuery};
+use abci::{RequestEndBlock, ResponseEndBlock, ResponseInitChain, RequestInitChain, RequestQuery, ResponseQuery, RequestCommit, ResponseCommit, RequestInfo, ResponseInfo, ResponseCheckTx, ResponseDeliverTx, ResponseBeginBlock, RequestBeginBlock};
+use std::ops::Deref;
 
-pub trait Checker {
-    fn check(&self, ctx: &dyn Context, tx: &dyn Tx) -> Res<CheckResult> {
-        Ok(CheckResult{})
+//pub type EndBlocker = fn(ctx: &dyn Context, req: &RequestEndBlock) -> ResponseEndBlock;
+//
+//pub type EndBlocker = fn(ctx: &dyn Context, req: &RequestEndBlock) -> ResponseEndBlock;
+
+pub trait Handler<T = Box<dyn Tx>, Q = RequestQuery, CheckRes: Default = CheckResult, DeliverRes: Default = DeliverResult, QueryRes: Default = ResponseQuery> {
+    fn info(&self, ctx: &dyn Context, req: &RequestInfo) -> ResponseInfo {
+        ResponseInfo::new()
+    }
+
+    fn init_chain(&self, ctx: &dyn Context, req: &RequestInitChain) -> ResponseInitChain {
+        ResponseInitChain::new()
+    }
+
+    fn begin_block(&self, ctx: &dyn Context, req: &RequestBeginBlock) -> ResponseBeginBlock {
+        ResponseBeginBlock::new()
+    }
+
+    fn check(&self, ctx: &dyn Context, tx: &T) -> CheckRes {
+        CheckRes::default()
+    }
+
+    fn deliver(&self, ctx: &dyn Context, tx: &T) -> DeliverRes {
+        DeliverRes::default()
+    }
+
+    fn end_block(&self, ctx: &dyn Context, req: &RequestEndBlock) -> ResponseEndBlock {
+        ResponseEndBlock::new()
+    }
+
+    fn commit(&self, ctx: &dyn Context, req: &RequestCommit) -> ResponseCommit {
+        ResponseCommit::new()
+    }
+
+    fn query(&self, ctx: &dyn Context, query: &Q) -> QueryRes {
+        QueryRes::default()
     }
 }
 
-pub trait Deliverer {
-    fn deliver(&self, ctx: &dyn Context, tx: &dyn Tx) -> Res<DeliverResult> {
-        Ok(DeliverResult{})
-    }
-}
+pub type RawHandler = Box<dyn Handler<Box<[u8]>, RequestQuery, ResponseCheckTx, ResponseDeliverTx, ResponseQuery>>;
+pub type TxHandler = Box<dyn Handler<Box<dyn Tx>>>;
 
-pub trait Querier {
-    fn query(&self, ctx: &dyn Context, tx: &RequestQuery) -> ResponseQuery {
-        ResponseQuery::new()
-    }
-}
-
-pub type InitChainer = fn(ctx: &dyn Context, req: &RequestInitChain) -> ResponseInitChain;
-
-pub type BeginBlocker = fn(ctx: &dyn Context, req: &RequestBeginBlock) -> ResponseBeginBlock;
-
-pub type EndBlocker = fn(ctx: &dyn Context, req: &RequestEndBlock) -> ResponseEndBlock;
-
-pub trait Handler: Checker + Deliverer + Querier {
-    fn init_chainer(&self) -> Option<InitChainer> {
-        None
+pub trait Decorator<
+    T=Box<dyn Tx>,
+    Q = RequestQuery,
+    CheckRes: Default = CheckResult,
+    DeliverRes: Default = DeliverResult,
+    QueryRes: Default = ResponseQuery,
+> {
+    fn on_info(&self, ctx: &dyn Context, req: &RequestInfo, next: &dyn Handler<T, Q, CheckRes, DeliverRes, QueryRes>) -> ResponseInfo {
+        next.info(ctx, req)
     }
 
-    fn begin_blocker(&self) -> Option<BeginBlocker> {
-        None
+    fn on_init_chain(&self, ctx: &dyn Context, req: &RequestInitChain, next: &dyn Handler<T, Q, CheckRes, DeliverRes, QueryRes>) -> ResponseInitChain {
+        next.init_chain(ctx, req)
     }
 
-    fn end_blocker(&self) -> Option<EndBlocker> {
-        None
+    fn on_begin_block(&self, ctx: &dyn Context, req: &RequestBeginBlock, next: &dyn Handler<T, Q, CheckRes, DeliverRes, QueryRes>) -> ResponseBeginBlock {
+        next.begin_block(ctx, req)
     }
-}
 
-pub trait Decorator {
-    fn decorate_check(&self, ctx: &dyn Context, tx: &dyn Tx, next: &dyn Checker) -> Res<CheckResult> {
+    fn on_check(&self, ctx: &dyn Context, tx: &T, next: &dyn Handler<T, Q, CheckRes, DeliverRes, QueryRes>) -> CheckRes {
         next.check(ctx, tx)
     }
-    fn decorate_deliver(&self, ctx: &dyn Context, tx: &dyn Tx, next: &dyn Deliverer) -> Res<DeliverResult> {
+    fn on_deliver(&self, ctx: &dyn Context, tx: &T, next: &dyn Handler<T, Q, CheckRes, DeliverRes, QueryRes>) -> DeliverRes {
         next.deliver(ctx, tx)
     }
 
-    fn decorate_query(&self, ctx: &dyn Context, req: &RequestQuery, next: &dyn Querier) -> ResponseQuery {
+    fn on_end_block(&self, ctx: &dyn Context, req: &RequestEndBlock, next: &dyn Handler<T, Q, CheckRes, DeliverRes, QueryRes>) -> ResponseEndBlock {
+        next.end_block(ctx, req)
+    }
+
+    fn on_commit(&self, ctx: &dyn Context, req: &RequestCommit, next: &dyn Handler<T, Q, CheckRes, DeliverRes, QueryRes>) -> ResponseCommit {
+        next.commit(ctx, req)
+    }
+
+    fn on_query(&self, ctx: &dyn Context, req: &Q, next: &dyn Handler<T, Q, CheckRes, DeliverRes, QueryRes>) -> QueryRes {
         next.query(ctx, req)
     }
 }

@@ -7,6 +7,7 @@ use std::error::Error;
 use crate::store::{ReadonlyKVStore, KVStore};
 use bech32::Error::InvalidChecksum;
 use im::HashSet;
+use crate::context::ABCIPhase::Query;
 
 #[derive(Clone)]
 pub struct StdContext {
@@ -21,11 +22,19 @@ pub struct StoreKey(Box<[u8]>);
 #[derive(Clone)]
 pub enum ABCIPhase {
     Query,
+    Info,
     InitChain,
     BeginBlock,
     Check,
     Deliver,
     EndBlock,
+    Commit,
+}
+
+impl Default for ABCIPhase {
+    fn default() -> Self {
+        Query
+    }
 }
 
 pub trait Context {
@@ -38,8 +47,10 @@ pub trait Context {
     fn get_conditions(&self) -> &HashSet<Condition>;
     fn with_conditions(&self, conditions: &[Condition]) -> Box<dyn Context>;
     fn abci_phase(&self) -> &ABCIPhase;
-    fn set_value(&self, key: &[u8], value: &[u8]);
+    fn with_value(&self, key: &[u8], value: &[u8]) -> Box<dyn Context>;
     fn get_value(&self, key: &[u8]) -> Option<&[u8]>;
+    fn with_version(&self, version: u64) -> Box<dyn Context>;
+    fn get_version(&self) -> u64;
 }
 
 impl Context for StdContext {
@@ -107,11 +118,19 @@ impl Context for StdContext {
         &self.phase
     }
 
-    fn set_value(&self, key: &[u8], value: &[u8]) {
+    fn with_value(&self, key: &[u8], value: &[u8]) -> Box<dyn Context> {
         unimplemented!()
     }
 
     fn get_value(&self, key: &[u8]) -> Option<&[u8]> {
+        unimplemented!()
+    }
+
+    fn with_version(&self, version: u64) -> Box<dyn Context> {
+        unimplemented!()
+    }
+
+    fn get_version(&self) -> u64 {
         unimplemented!()
     }
 }

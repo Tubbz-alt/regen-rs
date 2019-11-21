@@ -3,3 +3,7 @@ syntax = "proto3";
 message StdSignature {
 
 }
+
+message UpgradeInfo {
+    uint64 
+}

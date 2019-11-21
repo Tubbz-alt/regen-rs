@@ -1,9 +1,9 @@
-use crate::handler::Handler;
+use crate::handler::{Handler, RawHandler};
 use abci::{RequestCheckTx, ResponseCheckTx, RequestBeginBlock, RequestDeliverTx, ResponseDeliverTx, ResponseBeginBlock, RequestEndBlock, ResponseEndBlock, ResponseCommit, RequestCommit, RequestInfo, ResponseInfo, RequestInitChain, ResponseInitChain, RequestQuery, ResponseQuery};
 use crate::tx::Tx;
 use std::error::Error;
 use crate::context::{StdContext, ABCIPhase};
-use crate::context::ABCIPhase::{BeginBlock, Check, InitChain, Query, Deliver, EndBlock};
+use crate::context::ABCIPhase::{BeginBlock, Check, InitChain, Query, Deliver, EndBlock, Commit};
 use crate::config::Config;
 
 struct ABCIBaseApp {
@@ -24,12 +24,12 @@ struct ABCIBaseApp {
     base_context: StdContext,
     block_context: StdContext,
     //    decoder: TxDecoder,
-    handler: Box<dyn Handler>,
+    handler: RawHandler,
     //    ticker: Ticker,
 }
 
 impl ABCIBaseApp {
-    pub fn new(chain_id: String, handler: Box<dyn Handler>, config: Config) -> Self {
+    pub fn new(chain_id: String, handler: RawHandler, config: Config) -> Self {
         let ctx = StdContext{
             config,
             header: Default::default(),
@@ -40,7 +40,7 @@ impl ABCIBaseApp {
             chain_id,
             base_context: ctx.clone(),
             block_context: ctx,
-            handler,
+            handler: handler,
         }
     }
 }
@@ -61,10 +61,7 @@ impl abci::Application for ABCIBaseApp {
     fn init_chain(&mut self, req: &RequestInitChain) -> ResponseInitChain {
         let mut ctx = self.base_context.clone();
         ctx.phase = InitChain;
-        match self.handler.init_chainer() {
-            Some(f) => f(&ctx, req),
-            None => ResponseInitChain::new()
-        }
+        self.handler.init_chain(&ctx, req)
     }
 
     fn begin_block(&mut self, req: &RequestBeginBlock) -> ResponseBeginBlock {
@@ -72,59 +69,31 @@ impl abci::Application for ABCIBaseApp {
         ctx.phase = BeginBlock;
         ctx.header = req.get_header().clone();
         self.block_context = ctx.clone();
-        match self.handler.begin_blocker() {
-            Some(f) => f(&ctx, req),
-            None => ResponseBeginBlock::new()
-        }
+        self.handler.begin_block(&ctx, req)
     }
 
     fn check_tx(&mut self, req: &RequestCheckTx) -> ResponseCheckTx {
         let mut ctx = self.base_context.clone();
         ctx.phase = Check;
-        let mut res = ResponseCheckTx::new();
-        match self.load_tx(req.get_tx()) {
-            Err(e) => {
-                res.code = 1;
-                res
-            }
-            Ok(tx) => {
-                let hres =
-                    self.handler.check(&self.block_context, tx.as_ref());
-                res.code = 0;
-                res
-            }
-        }
+        self.handler.check(&ctx, &Box::from(req.get_tx()))
     }
 
     fn deliver_tx(&mut self, req: &RequestDeliverTx) -> ResponseDeliverTx {
         let mut ctx = self.base_context.clone();
         ctx.phase = Deliver;
-        let mut res = ResponseDeliverTx::new();
-        match self.load_tx(req.get_tx()) {
-            Err(e) => {
-                res.code = 1;
-                res
-            }
-            Ok(tx) => {
-                let hres =
-                    self.handler.deliver(&ctx, tx.as_ref());
-                res.code = 0;
-                res
-            }
-        }
+        self.handler.deliver(&ctx, &Box::from(req.get_tx()))
     }
 
     fn end_block(&mut self, req: &RequestEndBlock) -> ResponseEndBlock {
         let mut ctx = self.base_context.clone();
         ctx.phase = EndBlock;
-        match self.handler.end_blocker() {
-            Some(f) => f(&ctx, req),
-            None => ResponseEndBlock::new()
-        }
+        self.handler.end_block(&ctx, req)
     }
 
-    fn commit(&mut self, _req: &RequestCommit) -> ResponseCommit {
-        ResponseCommit::new()
+    fn commit(&mut self, req: &RequestCommit) -> ResponseCommit {
+        let mut ctx = self.base_context.clone();
+        ctx.phase = Commit;
+        self.handler.commit(&ctx, req)
     }
 
     fn query(&mut self, req: &RequestQuery) -> ResponseQuery {
