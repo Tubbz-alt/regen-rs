@@ -9,7 +9,7 @@ use crate::x::sig::codec::Account;
 use crate::x::sig::codec;
 use crate::auth::ed25519;
 
-struct Keeper {
+pub struct Keeper {
     auth_table: Box<dyn Table<Address, Account>>
 }
 
@@ -18,26 +18,18 @@ pub fn new_keeper() -> Box<Keeper> {
 }
 
 impl Decorator for Keeper {
-    fn check(&self, ctx: &dyn Context, tx: &dyn Tx, next: &dyn Checker) -> Result<CheckResult, Box<dyn Error>> {
+    fn decorate_check(&self, ctx: &dyn Context, tx: &dyn Tx, next: &dyn Checker) -> Result<CheckResult, Box<dyn Error>> {
         let chain_id: String = ctx.block_header().chain_id.clone();
-        match self.verify_tx_signatures(ctx, tx) {
-            Err(e) => Err(e),
-            Ok(conds) => {
-                let new_ctx = ctx.with_conditions(conds.as_ref());
-                next.check(new_ctx.as_ref(), tx)
-            }
-        }
+        let conds = self.verify_tx_signatures(ctx, tx)?;
+        let new_ctx = ctx.with_conditions(conds.as_ref());
+        next.check(new_ctx.as_ref(), tx)
     }
 
-    fn deliver(&self, ctx: &dyn Context, tx: &dyn Tx, next: &dyn Deliverer) -> Result<DeliverResult, Box<dyn Error>> {
+    fn decorate_deliver(&self, ctx: &dyn Context, tx: &dyn Tx, next: &dyn Deliverer) -> Result<DeliverResult, Box<dyn Error>> {
         let chain_id: String = ctx.block_header().chain_id.clone();
-        match self.verify_tx_signatures(ctx, tx) {
-            Err(e) => Err(e),
-            Ok(conds) => {
-                let new_ctx = ctx.with_conditions(conds.as_ref());
-                next.deliver(new_ctx.as_ref(), tx)
-            }
-        }
+        let conds = self.verify_tx_signatures(ctx, tx)?;
+        let new_ctx = ctx.with_conditions(conds.as_ref());
+        next.deliver(new_ctx.as_ref(), tx)
     }
 }
 
@@ -48,12 +40,8 @@ impl Keeper {
         let sigs = tx.get_signatures();
         let mut signers = Vec::new();
         for sig in sigs.iter() {
-            match self.verify_signature(ctx, sig.as_ref(), sign_bytes, chain_id) {
-                Err(e) => return Err(e),
-                Ok(cond) => {
-                    signers.push(cond)
-                }
-            }
+            let cond = self.verify_signature(ctx, sig.as_ref(), sign_bytes, chain_id)?;
+            signers.push(cond);
         }
         Ok(Box::from(signers))
     }
@@ -64,21 +52,13 @@ impl Keeper {
         let acc = self.get_or_create_account(ctx, &addr);
         let seq = sig.get_sequence();
         let to_sign = build_sign_bytes(sign_bytes, chain_id, seq);
-        match wrap_pub_key(acc.get_pubkey()) {
-            Err(e) => Err(e),
-            Ok(pk) => {
-                if !pk.verify(to_sign.as_ref(), sig.get_signature()) {
-                    panic!()
-                }
-                match acc.check_and_increment_sequence(seq) {
-                    Err(e) => Err(e),
-                    Ok(new_acc) => {
-                        self.auth_table.save(ctx, &new_acc);
-                        Ok(cond)
-                    }
-                }
-            }
+        let pk = wrap_pub_key(acc.get_pubkey())?;
+        if !pk.verify(to_sign.as_ref(), sig.get_signature()) {
+            panic!()
         }
+        let new_acc = acc.check_and_increment_sequence(seq)?;
+        self.auth_table.save(ctx, &new_acc);
+        Ok(cond)
     }
 
     fn get_or_create_account(&self, ctx: &dyn Context, addr: &Address) -> Account {

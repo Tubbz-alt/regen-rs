@@ -9,7 +9,8 @@ pub struct Condition {
 
 impl ToString for Condition {
     fn to_string(&self) -> String {
-        format!("{}/{}/{}", &self.ext, &self.typ, &self.data)
+//        format!("{}/{}/{}", &self.ext, &self.typ, &self.data)
+        panic!()
     }
 }
 

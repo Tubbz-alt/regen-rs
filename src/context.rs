@@ -8,6 +8,7 @@ use crate::store::{ReadonlyKVStore, KVStore};
 use bech32::Error::InvalidChecksum;
 use im::HashSet;
 
+#[derive(Clone)]
 pub struct StdContext {
     pub config: Config,
     pub header: Header,
@@ -17,6 +18,7 @@ pub struct StdContext {
 
 pub struct StoreKey(Box<[u8]>);
 
+#[derive(Clone)]
 pub enum ABCIPhase {
     Query,
     InitChain,
@@ -36,6 +38,8 @@ pub trait Context {
     fn get_conditions(&self) -> &HashSet<Condition>;
     fn with_conditions(&self, conditions: &[Condition]) -> Box<dyn Context>;
     fn abci_phase(&self) -> &ABCIPhase;
+    fn set_value(&self, key: &[u8], value: &[u8]);
+    fn get_value(&self, key: &[u8]) -> Option<&[u8]>;
 }
 
 impl Context for StdContext {
@@ -101,6 +105,14 @@ impl Context for StdContext {
 
     fn abci_phase(&self) -> &ABCIPhase {
         &self.phase
+    }
+
+    fn set_value(&self, key: &[u8], value: &[u8]) {
+        unimplemented!()
+    }
+
+    fn get_value(&self, key: &[u8]) -> Option<&[u8]> {
+        unimplemented!()
     }
 }
 

@@ -1,4 +1,4 @@
-use crate::handler::{Handler, Checker, Deliverer};
+use crate::handler::{Handler, Checker, Deliverer, Querier};
 use crate::context::Context;
 use crate::tx::Tx;
 use crate::result::{CheckResult, DeliverResult, Res};
@@ -9,7 +9,7 @@ use std::ops::Deref;
 
 struct GrpcHandler {
     method_resolver: Box<dyn MethodResolver>,
-    methods: HashMap<String, dyn MethodHandler>
+    methods: HashMap<String, ServerMethod>
 }
 
 pub struct MethodCall {
@@ -23,6 +23,8 @@ pub trait MethodResolver {
 
 impl Handler for GrpcHandler {}
 
+impl Querier for GrpcHandler {}
+
 impl Checker for GrpcHandler {
     fn check(&self, ctx: &dyn Context, tx: &dyn Tx) -> Result<CheckResult, Box<dyn Error>> {
         match self.method_resolver.resolve(tx.get_msg()) {
@@ -31,7 +33,8 @@ impl Checker for GrpcHandler {
                 match self.methods.get(&mc.name) {
                     None => panic!(),
                     Some(method) => {
-                        method.handle()
+//                        method.handle()
+                        panic!()
                     }
                 }
             }

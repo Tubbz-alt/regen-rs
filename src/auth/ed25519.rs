@@ -5,9 +5,9 @@ use crate::auth::{PubKey, HasCondition, Condition, EXT_SIG};
 pub struct Ed25519PubKey(PublicKey);
 
 pub fn from_bytes(bytes: &[u8]) -> Ed25519PubKey {
-    match PublicKey::from_bytes(bytes) {
-
-    }
+//    match PublicKey::from_bytes(bytes) {
+//
+//    }
     unimplemented!()
 }
 
@@ -16,7 +16,7 @@ impl HasCondition for Ed25519PubKey {
         return Condition {
             ext: String::from(EXT_SIG),
             typ: String::from("ed25519"),
-            data: self.0.to_bytes()
+            data: panic!() //self.0.to_bytes()
         }
     }
 }
