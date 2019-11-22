@@ -12,3 +12,8 @@ pub trait StdSignature {
     fn get_pub_key(&self) -> Box<dyn PubKey>;
     fn get_signature(&self) -> &[u8];
 }
+
+pub trait TxBuilder: Tx {
+    fn with_signature(&self, pub_key: Box<dyn PubKey>, sig: &[u8], seq: u64) -> Self;
+    fn get_msg_text(&self) -> String;
+}

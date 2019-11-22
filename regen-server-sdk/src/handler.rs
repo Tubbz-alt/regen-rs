@@ -3,7 +3,7 @@ use crate::result::{CheckResult, DeliverResult};
 use crate::tx::Tx;
 use crate::result::Res;
 use abci::{RequestEndBlock, ResponseEndBlock, ResponseInitChain, RequestInitChain, RequestQuery, ResponseQuery, RequestCommit, ResponseCommit, RequestInfo, ResponseInfo, ResponseCheckTx, ResponseDeliverTx, ResponseBeginBlock, RequestBeginBlock};
-use std::ops::Deref;
+use std::ops::{Deref, Shr};
 
 //pub type EndBlocker = fn(ctx: &dyn Context, req: &RequestEndBlock) -> ResponseEndBlock;
 //
@@ -85,3 +85,46 @@ pub trait Decorator<
     }
 }
 
+struct Chain<T, Q, CheckRes, DeliverRes, QueryRes>(Box<dyn Decorator<T, Q, CheckRes, DeliverRes, QueryRes>>, Box<dyn Handler<T, Q, CheckRes, DeliverRes, QueryRes>>);
+
+impl <T, Q, CheckRes: Default, DeliverRes: Default, QueryRes: Default> Handler<T, Q, CheckRes, DeliverRes, QueryRes> for Chain<T, Q, CheckRes, DeliverRes, QueryRes> {
+    fn info(&self, ctx: &Context, req: &RequestInfo) -> ResponseInfo {
+        self.0.on_info(ctx, req, self.1.as_ref())
+    }
+
+    fn init_chain(&self, ctx: &Context, req: &RequestInitChain) -> ResponseInitChain {
+        self.0.on_init_chain(ctx, req, self.1.as_ref())
+    }
+
+    fn begin_block(&self, ctx: &Context, req: &RequestBeginBlock) -> ResponseBeginBlock {
+        self.0.on_begin_block(ctx, req, self.1.as_ref())
+    }
+
+    fn check(&self, ctx: &Context, tx: &T) -> CheckRes {
+        self.0.on_check(ctx, tx, self.1.as_ref())
+    }
+
+    fn deliver(&self, ctx: &Context, tx: &T) -> DeliverRes {
+        self.0.on_deliver(ctx, tx, self.1.as_ref())
+    }
+
+    fn end_block(&self, ctx: &Context, req: &RequestEndBlock) -> ResponseEndBlock {
+        self.0.on_end_block(ctx, req, self.1.as_ref())
+    }
+
+    fn commit(&self, ctx: &Context, req: &RequestCommit) -> ResponseCommit {
+        self.0.on_commit(ctx, req, self.1.as_ref())
+    }
+
+    fn query(&self, ctx: &Context, query: &Q) -> QueryRes {
+        self.0.on_query(ctx, query, self.1.as_ref())
+    }
+}
+
+impl <T, Q, CheckRes: Default, DeliverRes: Default, QueryRes: Default> Shr<Box<dyn Handler<T, Q, CheckRes, DeliverRes, QueryRes>>> for Box<dyn Decorator<T, Q, CheckRes, DeliverRes, QueryRes>> {
+    type Output = Box<dyn Handler<T, Q, CheckRes, DeliverRes, QueryRes>>;
+
+    fn shr(self, rhs: Self::Output) -> Self::Output {
+        Box::from(Chain(self, rhs))
+    }
+}
