@@ -35,7 +35,7 @@ impl CliMiddleware<Box<dyn TxBuilder>> for SigCli {
         )
     }
 
-    fn on_run_cli_app(&self, ctx: &Context, matches: ArgMatches, next: &dyn CliHandler<dyn TxBuilder>) -> Res<Box<dyn TxBuilder>> {
+    fn on_run_cli_app(&self, ctx: &Context, matches: ArgMatches, next: &dyn CliHandler<Box<dyn TxBuilder>>) -> Res<Box<dyn TxBuilder>> {
         let mut bldr = next.run_cli_app(ctx, matches)?;
         let keys = matches.values_of(FROM).ok_or(NotFound)?;
         for key in keys.iter() {
