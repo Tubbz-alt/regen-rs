@@ -8,7 +8,7 @@ use crate::store::StoreError::NotFound;
 use regen_client_sdk::auth::PubKey;
 
 pub trait KeyBase {
-    fn sign(key: &str, bytes: &[u8], str_rep: &str) -> Res<SignRes>;
+    fn sign(&self, key: &str, bytes: &[u8], str_rep: &str) -> Res<SignRes>;
 }
 
 pub struct SignRes {
@@ -23,7 +23,7 @@ struct SigCli {
 const FROM: &'static str = "from";
 
 impl CliMiddleware<Box<dyn TxBuilder>> for SigCli {
-    fn on_build_cli_app(&self, ctx: &Context, app: App, next: &dyn CliHandler<dyn TxBuilder>) -> App {
+    fn on_build_cli_app(&self, ctx: &Context, app: App, next: &dyn CliHandler<Box<dyn TxBuilder>>) -> App {
         next.build_cli_app(
             ctx,
             app.arg(Arg::with_name(FROM)
