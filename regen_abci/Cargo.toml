@@ -1,5 +1,5 @@
 [package]
-name = "regen-server-sdk"
+name = "regen_abci"
 version = "0.1.0"
 authors = ["Aaron Craelius <aaronc@users.noreply.github.com>"]
 edition = "2018"
@@ -8,6 +8,11 @@ build = "build.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+regen_context = { path = "../regen_context" }
+regen_store = { path = "../regen_store" }
+regen_table = { path = "../regen_table" }
+regen-client-sdk = { path = "../regen-client-sdk" }
+err-derive = "0.2.1"
 abci = "0.6.4"
 blake2 = "0.8.1"
 bech32 = "0.7.1"
@@ -17,7 +22,6 @@ im = "14.0.0"
 clap = "2.33.0"
 #error-chain = "0.12.1"
 #simple-error = "0.2.1"
-regen-client-sdk = { path = "../regen-client-sdk" }
 
 [build-dependencies]
 protoc-rust-grpc = "0.6.1"

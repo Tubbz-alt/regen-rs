@@ -8,7 +8,6 @@
 //#[macro_use]
 //extern crate simple_error;
 
-pub mod store;
 pub mod context;
 pub mod table;
 pub mod config;

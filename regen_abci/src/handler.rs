@@ -1,9 +1,9 @@
-use crate::context::Context;
 use crate::result::{CheckResult, DeliverResult};
 use crate::tx::Tx;
 use crate::result::Res;
 use abci::{RequestEndBlock, ResponseEndBlock, ResponseInitChain, RequestInitChain, RequestQuery, ResponseQuery, RequestCommit, ResponseCommit, RequestInfo, ResponseInfo, ResponseCheckTx, ResponseDeliverTx, ResponseBeginBlock, RequestBeginBlock};
 use std::ops::{Deref, Shr};
+use regen_context::Context;
 
 //pub type EndBlocker = fn(ctx: &dyn Context, req: &RequestEndBlock) -> ResponseEndBlock;
 //

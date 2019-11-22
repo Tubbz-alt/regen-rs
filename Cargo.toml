@@ -4,7 +4,11 @@ members = [
   "regen",
   "regen-client-sdk",
   "regen-client-capi",
-  "regen-server-sdk",
   "regen-sdk-codegen",
   "regen-client-wasm",
+  "regen_context",
+  "regen_store",
+#  "regen_store_merk",
+  "regen_table",
+  "regen_abci",
 ]

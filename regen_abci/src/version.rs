@@ -1,9 +1,9 @@
 use crate::handler::{Handler, RawHandler};
 use abci::{RequestQuery, ResponseCheckTx, ResponseDeliverTx, ResponseQuery, RequestBeginBlock, ResponseBeginBlock, RequestInfo, ResponseInfo, RequestInitChain, ResponseInitChain, RequestEndBlock, ResponseEndBlock, RequestCommit, ResponseCommit};
-use crate::context::{Context, StoreKey};
+use crate::context::{StoreKey};
 use crate::result::Res;
 use std::collections::HashMap;
-use crate::table::Table;
+use regen_context::Context;
 
 struct VersionInfo {
     current_version: String,

@@ -2,7 +2,7 @@
 <module type="CPP_MODULE" version="4">
   <component name="NewModuleRootManager">
     <content url="file://$MODULE_DIR$">
-      <sourceFolder url="file://$MODULE_DIR$/regen-server-sdk/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/regen_abci/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/examples" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/benches" isTestSource="true" />
@@ -34,13 +34,36 @@
       <sourceFolder url="file://$MODULE_DIR$/regen-base-sdk/examples" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/regen-base-sdk/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/regen-base-sdk/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/regen_store/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/regen_store/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/regen_store/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/regen_store/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/regen_context/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/regen_context/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/regen_context/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/regen_context/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/regen_abci/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/regen_abci/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/regen_abci/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/regen_table/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/regen_table/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/regen_table/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/regen_table/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/regen_store_merk/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/regen_store_merk/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/regen_store_merk/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/regen_store_merk/benches" isTestSource="true" />
       <excludeFolder url="file://$MODULE_DIR$/regen-base-sdk/target" />
       <excludeFolder url="file://$MODULE_DIR$/regen-client-capi/target" />
       <excludeFolder url="file://$MODULE_DIR$/regen-client-sdk/target" />
       <excludeFolder url="file://$MODULE_DIR$/regen-client-wasm/target" />
       <excludeFolder url="file://$MODULE_DIR$/regen-sdk-codegen/target" />
-      <excludeFolder url="file://$MODULE_DIR$/regen-server-sdk/target" />
       <excludeFolder url="file://$MODULE_DIR$/regen/target" />
+      <excludeFolder url="file://$MODULE_DIR$/regen_abci/target" />
+      <excludeFolder url="file://$MODULE_DIR$/regen_context/target" />
+      <excludeFolder url="file://$MODULE_DIR$/regen_store/target" />
+      <excludeFolder url="file://$MODULE_DIR$/regen_store_merk/target" />
+      <excludeFolder url="file://$MODULE_DIR$/regen_table/target" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />

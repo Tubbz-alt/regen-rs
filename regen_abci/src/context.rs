@@ -3,7 +3,6 @@ use blake2::{Blake2b, Digest};
 use crate::config::Config;
 use bech32::{ToBase32, FromBase32};
 use std::error::Error;
-use crate::store::{ReadonlyKVStore, KVStore};
 use bech32::Error::InvalidChecksum;
 use crate::context::ABCIPhase::Query;
 use regen_client_sdk::auth::{Condition, Address};
@@ -13,7 +12,7 @@ use im::hashmap::*;
 use std::marker::PhantomData;
 use std::sync::Arc;
 use crate::result::Res;
-use crate::store::StoreError::{UnknownError, NotFound};
+use regen_context::{ContextKey, Context};
 
 pub struct StoreKey(Box<[u8]>);
 
@@ -35,38 +34,6 @@ impl Default for ABCIPhase {
     }
 }
 
-pub struct ContextKey<T>(&'static str, PhantomData<T>);
-
-//pub fn new_context_key<T>(key: &str) -> ContextKey<T> {
-//    ContextKey(String::from(key), PhantomData)
-//}
-
-#[derive(Default, Clone)]
-pub struct Context(im::HashMap<String, Arc<dyn Any>>);
-
-impl Context {
-    pub fn new() -> Context {
-        Context(im::HashMap::new())
-    }
-
-    pub fn get<T: 'static>(&self, key: &ContextKey<T>) -> Res<&T> {
-        match self.0.get(key.0) {
-            None => Err(Box::from(NotFound)),
-            Some(v) => match v.downcast_ref::<T>() {
-                None => Err(Box::from(UnknownError)),
-                Some(x) => Ok(x)
-            }
-        }
-    }
-
-    pub fn with<T: Any>(&self, key: &ContextKey<T>, value: T) -> Self {
-        Context(self.0.update(String::from(key.0), Arc::from(value)))
-    }
-
-    pub fn without<T>(&self, key: &ContextKey<T>) -> Self {
-        Context(self.0.without(key.0))
-    }
-}
 
 pub static mut VERSION: ContextKey<String> = ContextKey("version", PhantomData);
 
@@ -105,29 +72,27 @@ pub const BLOCK_HEADER: ContextKey<Header> = ContextKey("config", PhantomData);
 //        &self.header
 //    }
 //
-impl Context {
-    pub fn address_string(&self, addr: &Address) -> Res<String> {
-        let cfg = self.get(&CONFIG)?;
-        let x = bech32::encode(&cfg.address_prefix, addr.0.to_base32())?;
-        Ok(x)
-    }
+pub fn address_string(ctx: &Context, addr: &Address) -> Res<String> {
+    let cfg = ctx.get(&CONFIG)?;
+    let x = bech32::encode(&cfg.address_prefix, addr.0.to_base32())?;
+    Ok(x)
+}
 
-    pub fn parse_address(&self, str: &String) -> Res<Address> {
-        let cfg = self.get(&CONFIG)?;
-        let (hrp, data) = bech32::decode(str)?;
-        if !(hrp.eq(&cfg.address_prefix)) {
-            Err(Box::from(InvalidChecksum))
-        } else {
-            let res = Vec::<u8>::from_base32(&data)?;
-            Ok(Address(Box::from(res)))
-        }
+pub fn parse_address(ctx: &Context, str: &String) -> Res<Address> {
+    let cfg = ctx.get(&CONFIG)?;
+    let (hrp, data) = bech32::decode(str)?;
+    if !(hrp.eq(&cfg.address_prefix)) {
+        Err(Box::from(InvalidChecksum))
+    } else {
+        let res = Vec::<u8>::from_base32(&data)?;
+        Ok(Address(Box::from(res)))
     }
+}
 
-    pub fn condition_address(&self, cond: &Condition) -> Address {
-        let mut hasher = Blake2b::new();
-        hasher.input(cond.to_string());
-        Address(Box::from(hasher.result().as_slice()))
-    }
+pub fn condition_address(ctx: &Context, cond: &Condition) -> Address {
+    let mut hasher = Blake2b::new();
+    hasher.input(cond.to_string());
+    Address(Box::from(hasher.result().as_slice()))
 }
 //
 //    fn get_conditions(&self) -> &HashSet<Condition> {

@@ -1,12 +1,13 @@
-use crate::context::{Context, BLOCK_HEADER};
 use crate::result::{CheckResult, DeliverResult, Res};
 use crate::tx::{Tx, StdSignature};
-use crate::table::Table;
 use crate::x::sig::codec::Account;
 use crate::x::sig::codec;
 use crate::handler::{Decorator, Handler, TxHandler};
 use regen_client_sdk::auth::{Address, Condition, PubKey};
 use crate::x::sig::codec::PubKey_oneof_sum::ed25519;
+use regen_table::Table;
+use regen_context::Context;
+use crate::context::{BLOCK_HEADER, condition_address};
 
 pub struct Keeper {
     auth_table: Box<dyn Table<Address, Account>>
@@ -48,7 +49,7 @@ impl Keeper {
 
     fn verify_signature(&self, ctx: &Context, sig: &dyn StdSignature, sign_bytes: &[u8], chain_id: &str) -> Res<Condition> {
         let cond = sig.get_pub_key().condition();
-        let addr = ctx.condition_address(&cond);
+        let addr = condition_address(ctx, &cond);
         let acc = self.get_or_create_account(ctx, &addr);
         let seq = sig.get_sequence();
         let to_sign = build_sign_bytes(sign_bytes, chain_id, seq);
@@ -56,8 +57,8 @@ impl Keeper {
         if !pk.verify(to_sign.as_ref(), sig.get_signature()) {
             panic!()
         }
-        let new_acc = acc.check_and_increment_sequence(seq)?;
-        self.auth_table.save(ctx, &new_acc);
+        let mut new_acc = acc.check_and_increment_sequence(seq)?;
+        self.auth_table.save(ctx, &mut new_acc);
         Ok(cond)
     }
 
@@ -71,7 +72,7 @@ impl Keeper {
                 unknown_fields: Default::default(),
                 cached_size: Default::default(),
             },
-            Ok(acct) => acct.value()
+            Ok(acct) => *acct.value().clone()
         }
     }
 }

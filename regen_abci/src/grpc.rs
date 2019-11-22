@@ -1,4 +1,3 @@
-use crate::context::Context;
 use crate::tx::Tx;
 use crate::result::{CheckResult, DeliverResult, Res};
 use std::error::Error;
@@ -6,6 +5,7 @@ use std::collections::HashMap;
 use grpc::rt::{ServerMethod, MethodHandler};
 use std::ops::Deref;
 use crate::handler::Handler;
+use regen_context::Context;
 
 struct GrpcHandler {
     method_resolver: Box<dyn MethodResolver>,

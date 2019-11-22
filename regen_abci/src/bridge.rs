@@ -2,7 +2,6 @@ use regen_client_sdk::auth::Condition;
 use crate::handler::{Handler, RawHandler};
 use abci::{RequestQuery, Application};
 use protobuf::{parse_from_bytes, Message};
-use crate::context::Context;
 
 #[repr(C)]
 pub struct Bridge{

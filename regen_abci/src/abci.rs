@@ -2,9 +2,10 @@ use crate::handler::{Handler, RawHandler};
 use abci::{RequestCheckTx, ResponseCheckTx, RequestBeginBlock, RequestDeliverTx, ResponseDeliverTx, ResponseBeginBlock, RequestEndBlock, ResponseEndBlock, ResponseCommit, RequestCommit, RequestInfo, ResponseInfo, RequestInitChain, ResponseInitChain, RequestQuery, ResponseQuery};
 use crate::tx::Tx;
 use std::error::Error;
-use crate::context::{ABCIPhase, Context, ABCI_PHASE, BLOCK_HEADER};
+use crate::context::{ABCIPhase, ABCI_PHASE, BLOCK_HEADER};
 use crate::context::ABCIPhase::{BeginBlock, Check, InitChain, Query, Deliver, EndBlock, Commit, Info};
 use crate::config::Config;
+use regen_context::Context;
 
 struct ABCIBaseApp {
     base_context: Context,
