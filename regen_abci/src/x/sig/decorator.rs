@@ -6,7 +6,7 @@ use crate::handler::{Decorator, Handler, TxHandler};
 use regen_client_sdk::auth::{Address, Condition, PubKey};
 use crate::x::sig::codec::PubKey_oneof_sum::ed25519;
 use regen_table::Table;
-use regen_context::Context;
+use regen_context::SimpleContext;
 use crate::context::{BLOCK_HEADER, condition_address};
 
 pub struct Keeper {
@@ -34,7 +34,7 @@ impl Decorator for Keeper {
 }
 
 impl Keeper {
-    fn verify_tx_signatures(&self, ctx: &Context, tx: &dyn Tx) -> Res<Box<[Condition]>> {
+    fn verify_tx_signatures(&self, ctx: &SimpleContext, tx: &dyn Tx) -> Res<Box<[Condition]>> {
         let header = ctx.get(&BLOCK_HEADER)?;
         let chain_id = &header.chain_id;
         let sign_bytes = tx.get_sign_bytes();
@@ -47,7 +47,7 @@ impl Keeper {
         Ok(Box::from(signers))
     }
 
-    fn verify_signature(&self, ctx: &Context, sig: &dyn StdSignature, sign_bytes: &[u8], chain_id: &str) -> Res<Condition> {
+    fn verify_signature(&self, ctx: &SimpleContext, sig: &dyn StdSignature, sign_bytes: &[u8], chain_id: &str) -> Res<Condition> {
         let cond = sig.get_pub_key().condition();
         let addr = condition_address(ctx, &cond);
         let acc = self.get_or_create_account(ctx, &addr);
@@ -62,7 +62,7 @@ impl Keeper {
         Ok(cond)
     }
 
-    fn get_or_create_account(&self, ctx: &Context, addr: &Address) -> Account {
+    fn get_or_create_account(&self, ctx: &SimpleContext, addr: &Address) -> Account {
         match self.auth_table.get_one(ctx, addr) {
             Err(e) => Account {
                 address: Vec::from(addr.0.clone()),

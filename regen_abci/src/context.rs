@@ -12,9 +12,7 @@ use im::hashmap::*;
 use std::marker::PhantomData;
 use std::sync::Arc;
 use crate::result::Res;
-use regen_context::{ContextKey, Context};
-
-pub struct StoreKey(Box<[u8]>);
+use regen_context::{ContextKey, SimpleContext};
 
 #[derive(Clone)]
 pub enum ABCIPhase {
@@ -72,13 +70,13 @@ pub const BLOCK_HEADER: ContextKey<Header> = ContextKey("config", PhantomData);
 //        &self.header
 //    }
 //
-pub fn address_string(ctx: &Context, addr: &Address) -> Res<String> {
+pub fn address_string(ctx: &SimpleContext, addr: &Address) -> Res<String> {
     let cfg = ctx.get(&CONFIG)?;
     let x = bech32::encode(&cfg.address_prefix, addr.0.to_base32())?;
     Ok(x)
 }
 
-pub fn parse_address(ctx: &Context, str: &String) -> Res<Address> {
+pub fn parse_address(ctx: &SimpleContext, str: &String) -> Res<Address> {
     let cfg = ctx.get(&CONFIG)?;
     let (hrp, data) = bech32::decode(str)?;
     if !(hrp.eq(&cfg.address_prefix)) {
@@ -89,7 +87,7 @@ pub fn parse_address(ctx: &Context, str: &String) -> Res<Address> {
     }
 }
 
-pub fn condition_address(ctx: &Context, cond: &Condition) -> Address {
+pub fn condition_address(ctx: &SimpleContext, cond: &Condition) -> Address {
     let mut hasher = Blake2b::new();
     hasher.input(cond.to_string());
     Address(Box::from(hasher.result().as_slice()))

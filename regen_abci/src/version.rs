@@ -1,9 +1,9 @@
 use crate::handler::{Handler, RawHandler};
 use abci::{RequestQuery, ResponseCheckTx, ResponseDeliverTx, ResponseQuery, RequestBeginBlock, ResponseBeginBlock, RequestInfo, ResponseInfo, RequestInitChain, ResponseInitChain, RequestEndBlock, ResponseEndBlock, RequestCommit, ResponseCommit};
-use crate::context::{StoreKey};
 use crate::result::Res;
 use std::collections::HashMap;
-use regen_context::Context;
+use regen_context::SimpleContext;
+use crate::store::StoreKey;
 
 struct VersionInfo {
     current_version: String,
@@ -23,45 +23,45 @@ struct VersionManager {
 }
 
 impl VersionManager {
-    fn cur(&self, ctx: &Context) -> Box<dyn Handler> {
+    fn cur(&self, ctx: &SimpleContext) -> Box<dyn Handler> {
         unimplemented!()
     }
 }
 
 impl <T, Q, RC: Default, RD: Default, RQ: Default> Handler<T, Q, RC, RD, RQ> for VersionManager {
-    fn info(&self, ctx: &Context, req: &RequestInfo) -> ResponseInfo {
+    fn info(&self, ctx: &SimpleContext, req: &RequestInfo) -> ResponseInfo {
         self.cur(ctx).info(ctx, req)
     }
 
-    fn init_chain(&self, ctx: &Context, req: &RequestInitChain) -> ResponseInitChain {
+    fn init_chain(&self, ctx: &SimpleContext, req: &RequestInitChain) -> ResponseInitChain {
         self.cur(ctx).init_chain(ctx, req)
     }
 
-    fn begin_block(&self, ctx: &Context, req: &RequestBeginBlock) -> ResponseBeginBlock {
+    fn begin_block(&self, ctx: &SimpleContext, req: &RequestBeginBlock) -> ResponseBeginBlock {
         self.cur(ctx).begin_block(ctx, req)
     }
 
-    fn check(&self, ctx: &Context, tx: &T) -> RC {
+    fn check(&self, ctx: &SimpleContext, tx: &T) -> RC {
         self.cur(ctx).check(ctx, tx)
     }
 
-    fn deliver(&self, ctx: &Context, tx: &T) -> RD {
+    fn deliver(&self, ctx: &SimpleContext, tx: &T) -> RD {
         self.cur(ctx).deliver(ctx, tx)
     }
 
-    fn end_block(&self, ctx: &Context, req: &RequestEndBlock) -> ResponseEndBlock {
+    fn end_block(&self, ctx: &SimpleContext, req: &RequestEndBlock) -> ResponseEndBlock {
         self.cur(ctx).end_block(ctx, req)
     }
 
-    fn commit(&self, ctx: &Context, req: &RequestCommit) -> ResponseCommit {
+    fn commit(&self, ctx: &SimpleContext, req: &RequestCommit) -> ResponseCommit {
         self.cur(ctx).commit(ctx, req)
     }
 
-    fn query(&self, ctx: &Context, query: &Q) -> RQ {
+    fn query(&self, ctx: &SimpleContext, query: &Q) -> RQ {
         self.cur(ctx).query(ctx, query)
     }
 }
 
 pub trait VersionHandler: Handler<Box<[u8]>, RequestQuery, ResponseCheckTx, ResponseDeliverTx, ResponseQuery> {
-    fn migrate(&self, ctx: &Context, from_version: &str) -> Res<()>;
+    fn migrate(&self, ctx: &SimpleContext, from_version: &str) -> Res<()>;
 }

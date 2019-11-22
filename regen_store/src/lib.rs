@@ -27,6 +27,7 @@ pub trait ReadonlyKVStore<K, V> {
 }
 
 pub trait KVStore<K, V>: ReadonlyKVStore<K, V> {
+    fn readonly(&self) -> &dyn ReadonlyKVStore<K, V>;
     fn set(&mut self, key: &K, value: &V) -> Result<(), StoreError>;
     fn delete(&mut self, key: &K) -> Result<(), StoreError>;
 }

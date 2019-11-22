@@ -9,7 +9,6 @@
 //extern crate simple_error;
 
 pub mod context;
-pub mod table;
 pub mod config;
 pub mod result;
 pub mod handler;
@@ -22,5 +21,5 @@ pub mod version;
 pub mod bridge;
 pub mod cli;
 pub mod error;
+pub mod store;
 pub mod test;
-

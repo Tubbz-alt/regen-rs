@@ -15,14 +15,22 @@ pub enum ContextError {
 pub struct ContextKey<T>(pub &'static str, pub PhantomData<T>);
 
 #[derive(Default, Clone)]
-pub struct Context(im::HashMap<String, Arc<dyn Any>>);
+pub struct SimpleContext(im::HashMap<String, Arc<dyn Any>>);
 
-impl Context {
-    pub fn new() -> Context {
-        Context(im::HashMap::new())
+pub trait Context {
+    fn get<T: 'static>(&self, key: &ContextKey<T>) -> Result<&T, ContextError>;
+    fn with<T: Any>(&self, key: &ContextKey<T>, value: T) -> Self;
+    fn without<T>(&self, key: &ContextKey<T>) -> Self;
+}
+
+impl SimpleContext {
+    pub fn new() -> SimpleContext {
+        SimpleContext(im::HashMap::new())
     }
+}
 
-    pub fn get<T: 'static>(&self, key: &ContextKey<T>) -> Result<&T, ContextError> {
+impl Context for SimpleContext {
+    fn get<T: 'static>(&self, key: &ContextKey<T>) -> Result<&T, ContextError> {
         match self.0.get(key.0) {
             None => Err(ContextError::NotFound),
             Some(v) => match v.downcast_ref::<T>() {
@@ -32,11 +40,11 @@ impl Context {
         }
     }
 
-    pub fn with<T: Any>(&self, key: &ContextKey<T>, value: T) -> Self {
-        Context(self.0.update(String::from(key.0), Arc::from(value)))
+    fn with<T: Any>(&self, key: &ContextKey<T>, value: T) -> Self {
+        SimpleContext(self.0.update(String::from(key.0), Arc::from(value)))
     }
 
-    pub fn without<T>(&self, key: &ContextKey<T>) -> Self {
-        Context(self.0.without(key.0))
+    fn without<T>(&self, key: &ContextKey<T>) -> Self {
+        SimpleContext(self.0.without(key.0))
     }
 }

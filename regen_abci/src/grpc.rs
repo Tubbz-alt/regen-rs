@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use grpc::rt::{ServerMethod, MethodHandler};
 use std::ops::Deref;
 use crate::handler::Handler;
-use regen_context::Context;
+use regen_context::SimpleContext;
 
 struct GrpcHandler {
     method_resolver: Box<dyn MethodResolver>,
@@ -22,7 +22,7 @@ pub trait MethodResolver {
 }
 
 impl Handler for GrpcHandler {
-    fn check(&self, ctx: &Context, tx: &Box<dyn Tx>) -> CheckResult {
+    fn check(&self, ctx: &SimpleContext, tx: &Box<dyn Tx>) -> CheckResult {
 //        match self.method_resolver.resolve(tx.get_msg()) {
 //            Err(e) => Err(e),
 //            Ok(mc) => {
@@ -38,7 +38,7 @@ impl Handler for GrpcHandler {
         unimplemented!()
     }
 
-    fn deliver(&self, ctx: &Context, tx: &Box<dyn Tx>) -> DeliverResult {
+    fn deliver(&self, ctx: &SimpleContext, tx: &Box<dyn Tx>) -> DeliverResult {
         unimplemented!()
     }
 }

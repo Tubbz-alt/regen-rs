@@ -5,17 +5,17 @@ use std::error::Error;
 use crate::context::{ABCIPhase, ABCI_PHASE, BLOCK_HEADER};
 use crate::context::ABCIPhase::{BeginBlock, Check, InitChain, Query, Deliver, EndBlock, Commit, Info};
 use crate::config::Config;
-use regen_context::Context;
+use regen_context::SimpleContext;
 
 struct ABCIBaseApp {
-    base_context: Context,
-    block_context: Context,
+    base_context: SimpleContext,
+    block_context: SimpleContext,
     handler: RawHandler,
 }
 
 impl ABCIBaseApp {
     pub fn new(handler: RawHandler) -> Self {
-        let ctx = Context::new()
+        let ctx = SimpleContext::new()
             .with(&ABCI_PHASE, ABCIPhase::Query);
         ABCIBaseApp {
             base_context: ctx.clone(),
