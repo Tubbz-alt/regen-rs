@@ -1,5 +1,5 @@
 use std::error::Error;
-use crate::auth::PubKey;
+use regen_client_sdk::auth::PubKey;
 
 pub trait Tx {
     fn get_msg(&self) -> &[u8];

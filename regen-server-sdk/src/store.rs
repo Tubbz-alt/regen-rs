@@ -1,5 +1,25 @@
+use std::fmt::{Display, Formatter, Error, Debug};
+
 pub enum StoreError {
-    NotFound
+    UnknownError,
+    Unauthorized,
+    NotFound,
+}
+
+impl std::error::Error for StoreError {
+
+}
+
+impl Display for StoreError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+        Ok(())
+    }
+}
+
+impl Debug for StoreError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+        Ok(())
+    }
 }
 
 pub trait Entry<K, V> {

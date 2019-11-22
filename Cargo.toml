@@ -1,21 +1,10 @@
-[package]
-name = "regen-rs"
-version = "0.1.0"
-authors = ["Aaron Craelius <aaronc@users.noreply.github.com>"]
-edition = "2018"
-build = "build.rs"
+[workspace]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-abci = "0.6.4"
-blake2 = "0.8.1"
-bech32 = "0.7.1"
-ed25519-dalek = "1.0.0-pre.2"
-protobuf = "2.8.1"
-grpc = "0.6.1"
-im = "14.0.0"
-
-[build-dependencies]
-protoc-rust-grpc = "0.6.1"
-protoc-rust = "2.8.1"
+members = [
+  "regen",
+  "regen-client-sdk",
+  "regen-client-capi",
+  "regen-server-sdk",
+  "regen-sdk-codegen",
+  "regen-client-wasm",
+]
