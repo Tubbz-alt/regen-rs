@@ -1,5 +1,5 @@
 [package]
-name = "regen-sdk-codegen"
+name = "regen_codegen"
 version = "0.1.0"
 authors = ["Aaron Craelius <aaronc@users.noreply.github.com>"]
 edition = "2018"

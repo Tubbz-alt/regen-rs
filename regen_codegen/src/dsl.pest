@@ -1,0 +1,7 @@
+//
+// Created by intellij-pest on 2019-11-22
+// dsl
+// Author: arc
+//
+
+dsl = { "Hello World!" }
