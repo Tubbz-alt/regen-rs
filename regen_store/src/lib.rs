@@ -19,17 +19,22 @@ pub trait Iterator<K, V> {
     fn release(&self);
 }
 
-pub trait ReadonlyKVStore<K, V> {
+pub trait GetStore<K, V> {
     fn get(&self, key: &K) -> Result<Option<&V>, StoreError>;
     fn has(&self, key: &K) -> Result<bool, StoreError>;
+}
+
+pub trait IteratorStore<K, V>: GetStore<K, V> {
     fn iterator(&self, start: &K, end: &K) -> Result<Box<dyn Iterator<K, V>>, StoreError>;
     fn reverse_iterator(&self, start: &K, end: &K) -> Result<Box<dyn Iterator<K, V>>, StoreError>;
 }
 
-pub trait KVStore<K, V>: ReadonlyKVStore<K, V> {
-    fn readonly(&self) -> &dyn ReadonlyKVStore<K, V>;
+pub trait BasicKVStore<K, V>: GetStore<K, V> {
     fn set(&mut self, key: &K, value: &V) -> Result<(), StoreError>;
     fn delete(&mut self, key: &K) -> Result<(), StoreError>;
+}
+
+pub trait KVStore<K, V>: BasicKVStore<K, V> + IteratorStore<K, V> {
 }
 
 pub trait Batch<'a, K, V>: KVStore<K, V> {

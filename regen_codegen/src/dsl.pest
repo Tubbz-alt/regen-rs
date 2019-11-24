@@ -1,7 +1,30 @@
-//
-// Created by intellij-pest on 2019-11-22
-// dsl
-// Author: arc
-//
+alpha = @{ 'a'..'z' | 'A'..'Z' | "_" }
+digit = @{ '0'..'9' }
+ident = @{ (alpha | digit)+ }
+directive_ident = @{ "@" ~ ident }
 
-dsl = { "Hello World!" }
+module = { decl* }
+
+decl = { strct | method | table }
+
+strct = { "struct" ~ ident ~ "{" ~ fields ~  "}" }
+
+table = { "table" ~ ident ~ "{" ~ fields ~ "}" }
+
+op = { "tx" | "query" | "util" }
+
+method = { op ~ ident ~ "(" ~ fields ~ ")" ~ ident }
+
+fields = { (( field ~ ",")* ~ field ~ ","?)? }
+
+field = { arg | directive }
+
+arg = { ident ~ ":" ~ ident }
+
+directive = { directive_ident ~ ( "(" ~ directive_args ~ ")")? }
+
+directive_args = { (( directive_arg ~ ",")* ~ directive_arg ~ ","?)? }
+
+directive_arg = { ident }
+
+WHITESPACE = _{ " " | "\t" | "\n" }

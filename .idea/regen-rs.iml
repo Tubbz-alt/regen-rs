@@ -18,7 +18,7 @@
       <sourceFolder url="file://$MODULE_DIR$/regen-client-sdk/examples" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/regen-client-sdk/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/regen-client-sdk/benches" isTestSource="true" />
-      <sourceFolder url="file://$MODULE_DIR$/regen-sdk-codegen/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/regen_codegen/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/regen-sdk-codegen/examples" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/regen-sdk-codegen/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/regen-sdk-codegen/benches" isTestSource="true" />
@@ -53,6 +53,29 @@
       <sourceFolder url="file://$MODULE_DIR$/regen_store_merk/examples" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/regen_store_merk/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/regen_store_merk/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/regen_codegen/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/regen_codegen/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/regen_codegen/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/regen_si/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/regen_si/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/regen_si/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/regen_si/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/regen_chem/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/regen_chem/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/regen_chem/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/regen_chem/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/regen_sci/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/regen_sci/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/regen_sci/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/regen_sci/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/regen_bio/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/regen_bio/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/regen_bio/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/regen_bio/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/regen_avl/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/regen_avl/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/regen_avl/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/regen_avl/benches" isTestSource="true" />
       <excludeFolder url="file://$MODULE_DIR$/regen-base-sdk/target" />
       <excludeFolder url="file://$MODULE_DIR$/regen-client-capi/target" />
       <excludeFolder url="file://$MODULE_DIR$/regen-client-sdk/target" />
@@ -60,7 +83,13 @@
       <excludeFolder url="file://$MODULE_DIR$/regen-sdk-codegen/target" />
       <excludeFolder url="file://$MODULE_DIR$/regen/target" />
       <excludeFolder url="file://$MODULE_DIR$/regen_abci/target" />
+      <excludeFolder url="file://$MODULE_DIR$/regen_avl/target" />
+      <excludeFolder url="file://$MODULE_DIR$/regen_bio/target" />
+      <excludeFolder url="file://$MODULE_DIR$/regen_chem/target" />
+      <excludeFolder url="file://$MODULE_DIR$/regen_codegen/target" />
       <excludeFolder url="file://$MODULE_DIR$/regen_context/target" />
+      <excludeFolder url="file://$MODULE_DIR$/regen_sci/target" />
+      <excludeFolder url="file://$MODULE_DIR$/regen_si/target" />
       <excludeFolder url="file://$MODULE_DIR$/regen_store/target" />
       <excludeFolder url="file://$MODULE_DIR$/regen_store_merk/target" />
       <excludeFolder url="file://$MODULE_DIR$/regen_table/target" />

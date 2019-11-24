@@ -14,6 +14,24 @@ pub enum ContextError {
 
 pub struct ContextKey<T>(pub &'static str, pub PhantomData<T>);
 
+impl <T: 'static> ContextKey<T> {
+    fn get(&self, ctx: &dyn Context2) -> Result<&T, ContextError> {
+        let any = ctx.get_raw(self.0)?;
+        match any.downcast_ref::<T>() {
+            None => Err(TypeConversionFailed{key: String::from(self.0)}),
+            Some(x) => Ok(x)
+        }
+    }
+
+    fn set(&self, ctx: &dyn Context2, value: T) -> &dyn Context2 {
+        unimplemented!()
+    }
+
+    fn unset(&self, ctx: &dyn Context2) -> &dyn Context2 {
+        unimplemented!()
+    }
+}
+
 #[derive(Default, Clone)]
 pub struct SimpleContext(im::HashMap<String, Arc<dyn Any>>);
 
@@ -21,6 +39,12 @@ pub trait Context {
     fn get<T: 'static>(&self, key: &ContextKey<T>) -> Result<&T, ContextError>;
     fn with<T: Any>(&self, key: &ContextKey<T>, value: T) -> Self;
     fn without<T>(&self, key: &ContextKey<T>) -> Self;
+}
+
+pub trait Context2 {
+    fn get_raw(&self, key: &str) -> Result<&Arc<dyn Any>, ContextError>;
+    fn with_raw(&self, key: &str, value: Box<dyn Any>) -> Box<dyn Context2>;
+    fn without_raw(&self, key: &str) -> Box<Context2>;
 }
 
 impl SimpleContext {

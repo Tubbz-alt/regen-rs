@@ -22,4 +22,5 @@ pub mod bridge;
 pub mod cli;
 pub mod error;
 pub mod store;
+pub mod store_mgr;
 pub mod test;

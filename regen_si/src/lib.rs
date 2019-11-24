@@ -1,7 +1,7 @@
-use std::ops::{Add, Mul};
+use std::ops::{Add, Mul, Sub, Div};
 use std::fmt::{Display, Formatter, Error};
 
-#[derive(Display)]
+//#[derive(Display)]
 enum BaseUnit {
     Second = 1,
     Metre = 2,
@@ -12,46 +12,44 @@ enum BaseUnit {
     Candela = 7,
 }
 
-struct Unit([i32; 7]);
-
-impl Add for Unit {
-    type Output = Unit;
-
-    fn add(self, rhs: Self) -> Self::Output {
-        let mut powers = [0; 7];
-        for i in 1..=7 {
-            powers[i] = self.0[i] + rhs.0[i]
-        }
-        Unit(powers)
-    }
+pub struct QuantityDimension {
+    pub time_exponent: i32,
+    pub length_exponent: i32,
+    pub mass_exponent: i32,
+    pub electric_current_exponent: i32,
+    pub thermodynamic_temperature_exponent: i32,
+    pub amount_of_substance_exponent: i32,
+    pub luminous_intensity_exponent: i32,
+    pub dimensionless_exponent: i32,
+//    pub dimensionless: Option<Dimensionless>
 }
 
-impl Mul for BaseUnit {
-    type Output = Unit;
-
-    fn mul(self, pow: i32) -> Self::Output {
-        let mut powers = [0; 7];
-        powers[self] = rhs;
-        Unit(powers)
-    }
+pub struct QuantityKind {
+    pub dimension: QuantityDimension
 }
 
-impl Display for BaseUnit {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
-        unimplemented!()
-    }
+enum Dimensionless {
+    Angle,
+    SolidAngle,
+    Information,
+//    ConstituentConcentration // found this in uom, not sure how useful/common it is
 }
 
-impl Unit {
-    fn name(&self) -> &str {
-        match Self {}
-    }
+pub struct Unit<Number: Add + Sub + Mul + Div + PartialOrd> {
+    pub kind: QuantityKind,
+    pub conversion_multipler: Number,
+    pub conversion_offset: Number,
 
-    fn base_quantity(&self) -> &str {
-        match Self {}
-    }
-
-    fn symbol(&self) -> &str {
-        match Self {}
-    }
 }
+
+pub struct QuantityValue<Number: Add + Sub + Mul + Div + PartialOrd> {
+    pub number: Number,
+    pub unit: Unit<Number>,
+}
+
+pub struct MeasuredQuantityValue<Number: Add + Sub + Mul + Div + PartialOrd> {
+    pub number: Number,
+    pub unit: Unit<Number>,
+    pub uncertainty: Number,
+}
+

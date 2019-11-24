@@ -1,14 +1,19 @@
 [workspace]
 
 members = [
-  "regen",
-  "regen-client-sdk",
-  "regen-client-capi",
-  "regen-sdk-codegen",
-  "regen-client-wasm",
-  "regen_context",
-  "regen_store",
+#  "regen",
+#  "regen-client-sdk",
+#  "regen-client-capi",
+#  "regen-client-wasm",
+#  "regen_context",
+#  "regen_store",
 #  "regen_store_merk",
-  "regen_table",
-  "regen_abci",
+#  "regen_table",
+#  "regen_abci",
+  "regen_codegen",
+  "regen_si",
+  "regen_chem",
+  "regen_bio",
+  "regen_sci",
+  "regen_avl",
 ]

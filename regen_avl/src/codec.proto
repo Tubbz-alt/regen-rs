@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package regen_avl;
+
+message KVKey {
+    oneof key {
+        bytes node_hash__node = 1;
+        bytes node_hash__ref_count = 2;
+        bytes commit_hash__commit = 3;
+        bytes commit_hash__ref_count = 4;
+        bytes branch_name__commit_hash = 5;
+    }
+}
+
+message Node {
+    bytes key = 1;
+    bytes value = 2;
+    bytes left = 3;
+    bytes right = 4;
+    uint32 height = 5;
+    uint64 rank = 6;
+}
+
+message Commit {
+    bytes parent_commit_hash = 1;
+    bytes root_node_hash = 2;
+    uint64 height = 3;
+}

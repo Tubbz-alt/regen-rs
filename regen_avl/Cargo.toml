@@ -1,10 +1,16 @@
 [package]
-name = "regen_si"
+name = "regen_avl"
 version = "0.1.0"
 authors = ["Aaron Craelius <aaronc@users.noreply.github.com>"]
 edition = "2018"
+build = "build.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-uom = "0.26.0"
+regen_store = { path = "../regen_store" }
+blake2 = "0.8.1"
+protobuf = "2.8.1"
+
+[build-dependencies]
+protoc-rust = "2.8.1"
