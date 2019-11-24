@@ -1,4 +1,4 @@
-use regen_store::{KVStore, CommitKVStore, Batch, ReadonlyKVStore};
+use regen_store::{MutableOrderedMap, CommitKVStore, Batch, ReadonlyKVStore};
 use crate::handler::{Decorator, Handler};
 use regen_context::{SimpleContext, ContextKey};
 use abci;

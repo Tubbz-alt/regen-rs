@@ -1,6 +1,6 @@
 use err_derive::Error;
 use std::error::Error;
-use regen_store::{Entry, Iterator, ReadonlyKVStore, KVStore};
+use regen_store::{Entry, Iterator, ReadonlyKVStore, MutableOrderedMap};
 use regen_context::Context;
 use crate::TableError::{Other, Wrap};
 use regen_context::ContextError::NotFound;
@@ -19,7 +19,7 @@ pub enum TableError {
 
 pub trait StoreContext: Context {
     fn readonly_kv_store(&self, key: StoreKey) -> Result<&dyn ReadonlyKVStore<Vec<u8>, Vec<u8>>, TableError>;
-    fn kv_store(&self, key: StoreKey) -> Result<&mut dyn KVStore<Vec<u8>, Vec<u8>>, TableError>;
+    fn kv_store(&self, key: StoreKey) -> Result<&mut dyn MutableOrderedMap<Vec<u8>, Vec<u8>>, TableError>;
 }
 
 pub struct StoreKey(Vec<u8>);

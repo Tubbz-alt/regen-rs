@@ -1,45 +1,59 @@
 use std::sync::Arc;
 use std::cmp::Ordering;
-use blake2::{Blake2b, Digest};
-use std::error::Error;
-use regen_store::BasicKVStore;
+use regen_store::{MutableMap, Map, Result, StoreError};
 use protobuf::Message;
+use std::sync::atomic::AtomicPtr;
+use crate::NodeRef::{HashRef, MemRef, NoRef};
 
 mod codec;
 
-pub trait Marshaller<T> {
-    fn read(&self, buf: &[u8]) -> Result<T, Box<dyn Error>>;
+pub trait Reader<T> {
+    fn read(&self, buf: &[u8]) -> Result<T>;
+}
+
+pub trait Writer<T> {
     fn write(&self, k: &T) -> Vec<u8>;
 }
+
+pub trait Marshaller<T>: Reader<T> + Writer<T> {}
 
 pub trait Hasher {
     fn input(&self, bytes: &[u8]);
     fn result(&self) -> Vec<u8>;
-    fn output_size() -> usize;
+    fn output_size(&self) -> usize;
 }
 
 pub struct TreeContext<K, V> {
-    pub key_marshaller: Box<dyn Marshaller<K>>,
-    pub value_marshaller: Box<dyn Marshaller<V>>,
-    pub store: BasicKVStore<Vec<u8>, Vec<u8>>,
-    pub new_digest: fn() -> Box<Hasher>,
+    key_to_canonical_bytes: Box<dyn Writer<K>>,
+    value_to_canonical_bytes: Box<dyn Writer<V>>,
+    new_digest: fn() -> Box<dyn Hasher>,
+    store: Box<dyn MutableMap<Vec<u8>, Node<K, V>>>,
+    comparator: fn(K) -> Ordering,
 }
 
-struct Node<K, V> {
+#[derive(Clone)]
+struct NodeData<K, V> {
     key: K,
     value: V,
+    height: u32,
+    rank: u64,
+}
+
+#[derive(Clone)]
+struct Node<K, V> {
+    data: Arc<NodeData<K, V>>,
     left: NodeRef<K, V>,
     right: NodeRef<K, V>,
-    height: i32,
-    rank: i64,
-    hash: Vec<u8>,
+    hash: Option<Vec<u8>>,
 }
 
 enum NodeRef<K, V> {
     HashRef(Vec<u8>),
-    MemRef(Option<Arc<Node<K, V>>>),
+    MemRef(Arc<Node<K, V>>),
+    NoRef,
 }
 
+#[derive(Clone)]
 struct EditNode<K, V> {
     key: K,
     value: V,
@@ -49,121 +63,247 @@ struct EditNode<K, V> {
     rank: i64,
 }
 
+#[derive(Clone)]
 enum EditNodeRef<K, V> {
     PersistentNodeRef(NodeRef<K, V>),
-    EditNodeRef(EditNode<K, V>),
+    EditNodeRef(Box<EditNode<K, V>>),
 }
 
-impl<K, V> NodeRef<K, V> {
-    fn hash(&self) -> &Vec<u8> {
+impl<K, V> Node<K, V> {
+    fn calc_hash(&self, ctx: &mut TreeContext<K, V>, serialize: bool) -> Result<(Option<Self>)> {
+        match &self.hash {
+            // hash is already calculated
+            Some(h) => {
+                if serialize {
+                    if ctx.store.has(h)? {
+                        return Ok((None));
+                    } else {
+                        let new_left = self.left.calc_hash(ctx, serialize)?;
+                        let new_right = self.right.calc_hash(ctx, serialize)?;
+                        if new_left.is_some() || new_right.is_some() {
+                            let new_node = Node {
+                                data: self.data.clone(),
+                                left: new_left.unwrap_or_else(|| self.left.clone()),
+                                right: new_right.unwrap_or_else(|| self.right.clone()),
+                                hash: Some(h.clone()),
+                            };
+                            ctx.store.set(&h, &new_node)?;
+                            return Ok(Some(new_node));
+                        } else {
+                            ctx.store.set(&h, self)?;
+                            return Ok(None);
+                        }
+                    }
+                } else {
+                    return Ok(None);
+                }
+            }
+            // no hash yet, fall through
+            None => {}
+        }
+        let data = &self.data;
+        let key_bytes = ctx.key_to_canonical_bytes.write(&data.key);
+        let value_bytes = ctx.value_to_canonical_bytes.write(&data.value);
+        let mut hasher = (ctx.new_digest)();
+        hasher.input(key_bytes.as_slice());
+        hasher.input(value_bytes.as_slice());
+        let new_left = self.left.calc_hash(ctx, serialize)?.unwrap_or_else(|| self.left.clone());
+        let new_right = self.right.calc_hash(ctx, serialize)?.unwrap_or_else(|| self.right.clone());
+        hasher.input(&new_left.get_hash());
+        hasher.input(&new_right.get_hash());
+        let hash = hasher.result();
+        let new_node = Node {
+            data: data.clone(),
+            left: new_left,
+            right: new_right,
+            hash: Some(hash.clone()),
+        };
+        if serialize {
+            ctx.store.set(&hash, &new_node)?;
+        }
+        Ok(Some(new_node))
+    }
+
+//    fn serialize(&self, ctx: &TreeContext<K, V>, store: &mut dyn MutableMap<Vec<u8>, Node<K, V>>) -> Result<()> {
+//        let (mut opt_new_node, hash) = self.calc_hash(ctx);
+//        if store.has(&hash)? {
+//            return Ok(());
+//        }
+//        let mut new_node = opt_new_node.unwrap_or_else(|| *self.clone());
+//        new_node.left.serialize()
+////        let new_node = self.calc_hash(ctx).un
+//        match &self.left {
+//            &NodeRef::MemRef(node) => {
+//                let _ = node.serialize(ctx, store)?;
+//            }
+//            _ => {}
+//        }
+//        self.left = self.left.serialize(ctx, store)?;
+//        self.right = self.right.serialize(ctx, store)?;
+//        let _ = store.set(hash, self);
+//        Ok(())
+//            let mut kv_key = codec::KVKey::new();
+//            kv_key.set_node_hash__node(hash.clone());
+//            let key_proto = kv_key.write_to_bytes()?;
+//            if ctx.store.has(&key_proto) {
+//                return Ok(&self.hash);
+//            }
+//            if key_bytes.len() == 0 {
+//                key_bytes = ctx.key_marshaller.write(&self.key);
+//                value_bytes = ctx.value_marshaller.write(&self.value);
+//                left_hash = self.left.calc_hash(ctx, persist);
+//                right_hash = self.right.calc_hash(ctx, persist);
+//            }
+//            let kv_val = codec::Node {
+//                key: key_bytes,
+//                value: value_bytes,
+//                left: left_hash,
+//                right: right_hash,
+//                height: 0,
+//                rank: 0,
+//                unknown_fields: Default::default(),
+//                cached_size: Default::default(),
+//            };
+//            let val_proto = kv_val.write_to_bytes()?;
+//            ctx.store.set(key_proto.as_ref(), val_proto.as_ref())?;
+//}
+}
+
+impl<K, V> Clone for NodeRef<K, V> {
+    fn clone(&self) -> Self {
         match self {
-            NodeRef::HashRef(hash) => hash,
-            NodeRef::MemRef(Some(r)) => &r.hash,
-            NodeRef::MemRef(None) => &Vec::new()
+            HashRef(h) => HashRef(h.clone()),
+            MemRef(n) => MemRef(n.clone()),
+            NoRef => NoRef
+        }
+    }
+
+    fn clone_from(&mut self, source: &Self) {
+        unimplemented!()
+    }
+}
+
+const EMPTY: Vec<u8> = Vec::new();
+
+impl<K, V> NodeRef<K, V> {
+    fn get_hash(&self) -> Vec<u8> {
+        match self {
+            NodeRef::HashRef(h) => h.clone(),
+            NodeRef::MemRef(node) => node.hash.clone().unwrap_or(EMPTY),
+            NodeRef::NoRef => EMPTY,
+        }
+    }
+
+    fn calc_hash(&self, ctx: &mut TreeContext<K, V>, serialize: bool) -> Result<Option<NodeRef<K, V>>> {
+        match self {
+            NodeRef::HashRef(_) => Ok(None),
+            NodeRef::MemRef(node) => {
+                match node.calc_hash(ctx, serialize)? {
+                    Some(new_node) => {
+                        if serialize {
+                            let hash = new_node.hash.unwrap_or_else(||Vec::new());
+                            Ok(Some(HashRef(hash.clone())))
+                        } else {
+                            Ok(Some(MemRef(Arc::new(new_node))))
+                        }
+                    }
+                    None => {
+                        let hash = node.hash.clone().unwrap_or(EMPTY);
+                        if serialize {
+                            Ok(Some(HashRef(hash.clone())))
+                        } else {
+                            Ok(None)
+                        }
+                    }
+                }
+            }
+            NoRef => Ok(None)
         }
     }
 }
 
-impl<K, V> Node<K, V> {
-  fn calc_hash(&mut self, ctx: &mut TreeContext<K, V>, persist: bool) -> Result<&Vec<u8>, Box<dyn Error>> {
-//        let have_hash = self.hash.len() > 0;
-//        if have_hash  && persist {
-//            return Ok(&self.hash)
-//        }
-//        let mut key_bytes = Vec::new();
-//        let mut value_bytes = Vec::new();
-//        let mut left_hash = Vec::new();
-//        let mut right_hash = Vec::new();
-//        if !have_hash {
-//            key_bytes = ctx.key_marshaller.write(&self.key);
-//            value_bytes = ctx.value_marshaller.write(&self.value);
-//            let mut hasher = Blake2b::new();
-//            hasher.input(key_bytes.as_slice());
-//            hasher.input(value_bytes.as_slice());
-//            left_hash = self.left.calc_hash(ctx, persist);
-//            right_hash = self.right.calc_hash(ctx, persist);
-//            hasher.input(left_hash);
-//            hasher.input(right_hash);
-//            self.hash = hasher.result;
-//        }
-//        if persist {
-//            let mut kv_key = codec::KVKey::new();
-//            kv_key.set_node_hash__node(hash.clone());
-//            let key_proto = kv_key.write_to_bytes()?;
-//            if ctx.store.has(&key_proto) {
-//                return Ok(&self.hash)
-//            }
-//            if key_bytes.len() == 0 {
-//                key_bytes = ctx.key_marshaller.write(&self.key);
-//                value_bytes = ctx.value_marshaller.write(&self.value);
-//                left_hash = self.left.calc_hash(ctx, persist);
-//                right_hash = self.right.calc_hash(ctx, persist);
-//            }
-//            let kv_val = codec::Node {
-//                key: key_bytes,
-//                value: value_bytes,
-//                left: left_hash,
-//                right: right_hash,
-//                height: 0,
-//                rank: 0,
-//                unknown_fields: Default::default(),
-//                cached_size: Default::default()
-//            };
-//            let val_proto = kv_val.write_to_bytes()?;
-//            ctx.store.set(key_proto.as_ref(), val_proto.as_ref())?;
-//        }
-//        Ok(&self.hash)
-  }
-//    fn calc_hash(&mut self, ctx: &mut TreeContext<K, V>, persist: bool) -> Result<&Vec<u8>, Box<dyn Error>> {
-//        let have_hash = self.hash.len() > 0;
-//        if have_hash  && persist {
-//            return Ok(&self.hash)
-//        }
-//        let mut key_bytes = Vec::new();
-//        let mut value_bytes = Vec::new();
-//        let mut left_hash = Vec::new();
-//        let mut right_hash = Vec::new();
-//        if !have_hash {
-//            key_bytes = ctx.key_marshaller.write(&self.key);
-//            value_bytes = ctx.value_marshaller.write(&self.value);
-//            let mut hasher = Blake2b::new();
-//            hasher.input(key_bytes.as_slice());
-//            hasher.input(value_bytes.as_slice());
-//            left_hash = self.left.calc_hash(ctx, persist);
-//            right_hash = self.right.calc_hash(ctx, persist);
-//            hasher.input(left_hash);
-//            hasher.input(right_hash);
-//            self.hash = hasher.result;
-//        }
-//        if persist {
-//            let mut kv_key = codec::KVKey::new();
-//            kv_key.set_node_hash__node(hash.clone());
-//            let key_proto = kv_key.write_to_bytes()?;
-//            if ctx.store.has(&key_proto) {
-//                return Ok(&self.hash)
-//            }
-//            if key_bytes.len() == 0 {
-//                key_bytes = ctx.key_marshaller.write(&self.key);
-//                value_bytes = ctx.value_marshaller.write(&self.value);
-//                left_hash = self.left.calc_hash(ctx, persist);
-//                right_hash = self.right.calc_hash(ctx, persist);
-//            }
-//            let kv_val = codec::Node {
-//                key: key_bytes,
-//                value: value_bytes,
-//                left: left_hash,
-//                right: right_hash,
-//                height: 0,
-//                rank: 0,
-//                unknown_fields: Default::default(),
-//                cached_size: Default::default()
-//            };
-//            let val_proto = kv_val.write_to_bytes()?;
-//            ctx.store.set(key_proto.as_ref(), val_proto.as_ref())?;
-//        }
-//        Ok(&self.hash)
-//    }
+struct NodeStore<K, V> {
+    store: Box<dyn MutableMap<Vec<u8>, Vec<u8>>>,
+    key_marshaller: Box<dyn Marshaller<K>>,
+    value_marshaller: Box<dyn Marshaller<V>>,
 }
+
+const NODE_HASH_NODE_PREFIX: u8 = 0;
+
+fn node_hash__node__key(node_hash: &[u8]) -> Vec<u8> {
+    let mut res = Vec::with_capacity(node_hash.len() + 1);
+    res.push(NODE_HASH_NODE_PREFIX);
+    res.extend_from_slice(node_hash);
+    res
+}
+
+fn read_node_ref<K, V>(hash: Vec<u8>) -> NodeRef<K, V> {
+    if hash.len() == 0 {
+        return NodeRef::NoRef;
+    }
+    NodeRef::HashRef(hash)
+}
+
+impl<K, V> Map<Vec<u8>, Node<K, V>> for NodeStore<K, V> {
+    fn get(&self, hash: &Vec<u8>) -> Result<Option<Node<K, V>>> {
+        let res = self.store.get(&node_hash__node__key(hash))?;
+        match res {
+            None => Ok(None),
+            Some(bytes) => {
+                let mut proto_node: codec::Node = protobuf::parse_from_bytes(&bytes)?;
+                let key = self.key_marshaller.read(proto_node.get_key())?;
+                let value = self.value_marshaller.read(proto_node.get_value())?;
+                let mut left: NodeRef<K, V> = read_node_ref(proto_node.take_left());
+                let right = read_node_ref(proto_node.take_right());
+                let opt_hash = if hash.len() == 0 {
+                    None
+                } else {
+                    Some(hash.clone())
+                };
+                Ok(Some(Node {
+                    data: Arc::new(NodeData {
+                        key,
+                        value,
+                        height: proto_node.height,
+                        rank: proto_node.rank,
+                    }),
+                    left,
+                    right,
+                    hash: opt_hash,
+                }))
+            }
+        }
+    }
+
+    fn has(&self, hash: &Vec<u8>) -> Result<bool> {
+        self.has(&node_hash__node__key(hash))
+    }
+}
+
+impl<K, V> MutableMap<Vec<u8>, Node<K, V>> for NodeStore<K, V> {
+    fn set(&mut self, key: &Vec<u8>, value: &Node<K, V>) -> Result<()> {
+        let data = &value.data;
+        let key_bytes = self.key_marshaller.write(&data.key);
+        let value_bytes = self.value_marshaller.write(&data.value);
+        let proto_node = codec::Node {
+            key: key_bytes,
+            value: value_bytes,
+            left: value.left.get_hash().clone(),
+            right: value.right.get_hash().clone(),
+            height: data.height,
+            rank: data.rank,
+            unknown_fields: Default::default(),
+            cached_size: Default::default(),
+        };
+        let proto_bytes = proto_node.write_to_bytes()?;
+        self.store.set(&node_hash__node__key(key), &proto_bytes)
+    }
+
+    fn delete(&mut self, key: &Vec<u8>) -> Result<()> {
+        self.store.delete(&node_hash__node__key(key))
+    }
+}
+
 
 //trait NodeContext<K: Ord, V> {
 //}

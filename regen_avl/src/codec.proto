@@ -2,15 +2,15 @@ syntax = "proto3";
 
 package regen_avl;
 
-message KVKey {
-    oneof key {
-        bytes node_hash__node = 1;
-        bytes node_hash__ref_count = 2;
-        bytes commit_hash__commit = 3;
-        bytes commit_hash__ref_count = 4;
-        bytes branch_name__commit_hash = 5;
-    }
-}
+//message KVKey {
+//    oneof key {
+//        bytes node_hash__node = 1;
+//        bytes node_hash__ref_count = 2;
+//        bytes commit_hash__commit = 3;
+//        bytes commit_hash__ref_count = 4;
+//        bytes branch_name__commit_hash = 5;
+//    }
+//}
 
 message Node {
     bytes key = 1;
