@@ -39,8 +39,8 @@ pub trait MutableOrderedMap<K, V>: MutableMap<K, V> + OrderedMap<K, V> {
 }
 
 pub trait PersistentMap<K, V> {
-    fn with(&mut self, key: &K, value: &V) -> Result<Box<dyn PersistentMap<K, V>>>;
-    fn without(&mut self, key: &K) -> Result<Box<dyn PersistentMap<K, V>>>;
+    fn with(&self, key: &K, value: &V) -> Result<Box<dyn PersistentMap<K, V>>>;
+    fn without(&self, key: &K) -> Result<Box<dyn PersistentMap<K, V>>>;
 }
 
 pub trait Batch<'a, K, V>: MutableOrderedMap<K, V> {
