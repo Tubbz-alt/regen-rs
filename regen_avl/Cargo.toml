@@ -10,6 +10,7 @@ build = "build.rs"
 [dependencies]
 regen_store = { path = "../regen_store" }
 protobuf = "2.8.1"
+im = "14.0.0"
 
 [build-dependencies]
 protoc-rust = "2.8.1"

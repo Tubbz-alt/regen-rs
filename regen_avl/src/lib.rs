@@ -1,10 +1,11 @@
 use std::sync::Arc;
-use std::cmp::Ordering;
+use std::cmp::{Ordering, max};
 use regen_store::{MutableMap, Map, Result, StoreError};
 use protobuf::Message;
 use std::sync::atomic::AtomicPtr;
 use crate::NodeRef::{HashRef, MemRef, NoRef};
 
+mod lru;
 mod codec;
 
 pub trait Reader<T> {
@@ -123,50 +124,6 @@ impl<K, V> Node<K, V> {
         }
         Ok(Some(new_node))
     }
-
-//    fn serialize(&self, ctx: &TreeContext<K, V>, store: &mut dyn MutableMap<Vec<u8>, Node<K, V>>) -> Result<()> {
-//        let (mut opt_new_node, hash) = self.calc_hash(ctx);
-//        if store.has(&hash)? {
-//            return Ok(());
-//        }
-//        let mut new_node = opt_new_node.unwrap_or_else(|| *self.clone());
-//        new_node.left.serialize()
-////        let new_node = self.calc_hash(ctx).un
-//        match &self.left {
-//            &NodeRef::MemRef(node) => {
-//                let _ = node.serialize(ctx, store)?;
-//            }
-//            _ => {}
-//        }
-//        self.left = self.left.serialize(ctx, store)?;
-//        self.right = self.right.serialize(ctx, store)?;
-//        let _ = store.set(hash, self);
-//        Ok(())
-//            let mut kv_key = codec::KVKey::new();
-//            kv_key.set_node_hash__node(hash.clone());
-//            let key_proto = kv_key.write_to_bytes()?;
-//            if ctx.store.has(&key_proto) {
-//                return Ok(&self.hash);
-//            }
-//            if key_bytes.len() == 0 {
-//                key_bytes = ctx.key_marshaller.write(&self.key);
-//                value_bytes = ctx.value_marshaller.write(&self.value);
-//                left_hash = self.left.calc_hash(ctx, persist);
-//                right_hash = self.right.calc_hash(ctx, persist);
-//            }
-//            let kv_val = codec::Node {
-//                key: key_bytes,
-//                value: value_bytes,
-//                left: left_hash,
-//                right: right_hash,
-//                height: 0,
-//                rank: 0,
-//                unknown_fields: Default::default(),
-//                cached_size: Default::default(),
-//            };
-//            let val_proto = kv_val.write_to_bytes()?;
-//            ctx.store.set(key_proto.as_ref(), val_proto.as_ref())?;
-//}
 }
 
 impl<K, V> Clone for NodeRef<K, V> {
@@ -201,7 +158,7 @@ impl<K, V> NodeRef<K, V> {
                 match node.calc_hash(ctx, serialize)? {
                     Some(new_node) => {
                         if serialize {
-                            let hash = new_node.hash.unwrap_or_else(||Vec::new());
+                            let hash = new_node.hash.unwrap_or_else(|| Vec::new());
                             Ok(Some(HashRef(hash.clone())))
                         } else {
                             Ok(Some(MemRef(Arc::new(new_node))))
@@ -366,67 +323,174 @@ impl<K, V> MutableMap<Vec<u8>, Node<K, V>> for NodeStore<K, V> {
 //    }
 //}
 //
-//fn node_height<K: Ord, V>(node: &Option<Arc<dyn Node<K, V>>>) -> i32 {
-//    match node {
-//        None => 0,
-//        Some(n) => n.height()
-//    }
-//}
-//
-//fn balance_factor<K: Ord, V>(node: &Arc<dyn Node<K, V>>) -> i32 {
-//    node_height(&node.left()) - node_height(&node.right())
-//}
 //
 //type NodeFactory<K, V> = fn(key: &K, value: &V, left: &Option<Arc<dyn Node<K, V>>>, right: &Option<Arc<dyn Node<K, V>>>) -> Arc<dyn Node<K, V>>;
 //
-//fn balance<K: Ord + Clone, V: Clone>(key: &K, value: &V, left: &Option<Arc<dyn Node<K, V>>>, right: &Option<Arc<dyn Node<K, V>>>, make_node: &NodeFactory<K, V>) -> Arc<dyn Node<K, V>> {
-//    let diff = node_height(&left) - node_height(&right);
-//    // Left Big
-//    if diff == 2 {
-//        match left {
-//            None => panic!("unexpected"),
-//            Some(l) => {
-//                let bal_factor = balance_factor(&l);
-//                // Left Heavy
-//                if bal_factor >= 0 {
-//                    make_node(l.key(), l.value(), l.left(), &Some(make_node(key, value, l.right(), right)))
-//                }
-//                // Right Heavy
-//                else {
-//                    match l.right() {
-//                        None => panic!("illegal"),
-//                        Some(lr) =>
-//                            make_node(lr.key(), lr.value(),
-//                                      &Some(make_node(l.key(), l.value(), l.left(), lr.left())),
-//                                      &Some(make_node(key, value, lr.right(), right)))
-//                    }
-//                }
-//            }
-//        }
-//    } else if diff == -2 {
-//        match right {
-//            None => panic!("illegal"),
-//            Some(r) => {
-//                let bal_factor = balance_factor(&r);
-//                if bal_factor > 0 {
-//                    match r.left() {
-//                        None => panic!("illegal"),
-//                        Some(rl) =>
-//                            make_node(
-//                                rl.key(), rl.value(),
-//                                &Some(make_node(key, value, left, rl.left())),
-//                                &Some(make_node(r.key(), r.value(), rl.right(), r.right())),
-//                            )
-//                    }
-//                } else {
-//                    return make_node(r.key(), r.value(), &Some(make_node(key, value, left, r.left())), r.right());
-//                }
-//            }
-//        }
-//    } else {
-//        return make_node(key, value, left, right);
-//    }
-//}
+impl<K, V> NodeRef<K, V> {
+    fn get_node(&self, ctx: &TreeContext<K, V>) -> Result<Option<Arc<Node<K, V>>>> {
+        match self {
+            HashRef(h) =>
+                match ctx.store.get(&h)? {
+                    None => Ok(None),
+                    Some(node) => Ok(Some(Arc::new(node))),
+                }
+            MemRef(node) => Ok(Some(node.clone())),
+            NoRef => Ok(None),
+        }
+    }
+}
+
+fn node_height<K, V>(node: &Option<Arc<Node<K, V>>>) -> i32 {
+    match node {
+        None => 0,
+        Some(node) => node.data.height as i32,
+    }
+}
+
+fn node_rank<K, V>(node: &Option<Arc<Node<K, V>>>) -> u64 {
+    match node {
+        None => 0,
+        Some(node) => node.data.rank
+    }
+}
+
+fn make_node<K: Clone, V: Clone>(ctx: &TreeContext<K, V>, key: &K, value: &V, left: NodeRef<K, V>, right: NodeRef<K, V>) -> Result<Node<K, V>> {
+    let l = left.get_node(ctx)?;
+    let r = right.get_node(ctx)?;
+    Ok(Node {
+        data: Arc::new(NodeData {
+            key: key.clone(),
+            value: value.clone(),
+            height: (max(node_height(&l), node_height(&r))) as u32,
+            rank: node_rank(&l) + node_rank(&r),
+        }),
+        left,
+        right,
+        hash: None
+    })
+}
+
+impl<K: Clone, V: Clone> Node<K, V> {
+    fn balance_factor(&self, ctx: &TreeContext<K, V>) -> Result<i32> {
+        Ok(node_height(&self.left.get_node(ctx)?) - node_height(&self.right.get_node(ctx)?))
+    }
+
+    fn balance(&self, ctx: &TreeContext<K, V>) -> Result<Self> {
+        let left = self.left.get_node(ctx)?;
+        let right = self.right.get_node(ctx)?;
+        let left_height = node_height(&left);
+        let right_height = node_height(&right);
+        let diff = left_height - right_height;
+        let data = &self.data;
+        let key = &data.key;
+        let value = &data.value;
+        // Left Big
+        if diff == 2 {
+            match left {
+                None => panic!("illegal"),
+                Some(l) => {
+                    let bal_factor = l.balance_factor(ctx)?;
+                    // Left Heavy
+                    let l_data = &l.data;
+                    if bal_factor >= 0 {
+                        Ok(make_node(
+                            ctx,
+                            &l_data.key,
+                            &l_data.value,
+                            l.left.clone(),
+                            MemRef(Arc::from(make_node(
+                                ctx,
+                                &key,
+                                &value,
+                                l.right.clone(),
+                                self.right.clone()
+                            )?)),
+                        )?)
+                    }
+                    // Right Heavy
+                    else {
+                        match l.right.get_node(ctx)? {
+                            None => panic!("illegal"),
+                            Some(lr) => {
+                                let lr_data = &lr.data;
+                                Ok(make_node(
+                                    ctx,
+                                    &lr_data.key,
+                                    &lr_data.value,
+                                    MemRef(Arc::from(make_node(
+                                        ctx,
+                                        &l_data.key,
+                                        &l_data.value,
+                                        l.left.clone(),
+                                        lr.left.clone()
+                                    )?)),
+                                    MemRef(Arc::from(make_node(
+                                        ctx,
+                                        key,
+                                        value,
+                                        lr.right.clone(),
+                                        self.right.clone()
+                                    )?))
+                                )?)
+                            }
+                        }
+                    }
+                }
+            }
+        } else if diff == -2 {
+            match right {
+                None => panic!("illegal"),
+                Some(r) => {
+                    let bal_factor = r.balance_factor(ctx)?;
+                    let r_data = &r.data;
+                    if bal_factor > 0 {
+                        match r.left.get_node(ctx)? {
+                            None => panic!("illegal"),
+                            Some(rl) => {
+                                let rl_data = &rl.data;
+                                Ok(make_node(
+                                    ctx,
+                                    &rl_data.key,
+                                    &rl_data.value,
+                                    MemRef(Arc::from(make_node(
+                                        ctx,
+                                        key,
+                                        value,
+                                        self.left.clone(),
+                                        rl.left.clone()
+                                    )?)),
+                                    MemRef(Arc::from(make_node(
+                                        ctx,
+                                        &r_data.key,
+                                        &r_data.value,
+                                        rl.right.clone(),
+                                        r.right.clone()
+                                    )?)),
+                                )?)
+                            }
+                        }
+                    } else {
+                        Ok(make_node(
+                            ctx,
+                            &r_data.key,
+                            &r_data.value,
+                            MemRef(Arc::from(make_node(
+                                ctx,
+                                key,
+                                value,
+                                self.left.clone(),
+                                r.left.clone()
+                            )?)),
+                            r.right.clone()
+                        )?)
+                    }
+                }
+            }
+        } else {
+            Ok(make_node(ctx, key, value, self.left.clone(), self.right.clone())?)
+        }
+    }
+}
 //
 //fn find_node<'a, K: Ord, V>(node: &'a Arc<dyn Node<K, V>>, key: &K) -> Option<&'a Arc<dyn Node<K, V>>> {
 //    match key.cmp(node.key()) {
